@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  copr-db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=SuperSecretPassword!1
+
+  copr:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+      - ConnectionStrings__CopsDatabase=Server=copr-db,1433;Database=cops;User ID=sa;Password=SuperSecretPassword!1;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+      - BotOptions__DiscordApiToken=<YOUR_DISCORD_API_TOKEN>
+    build:
+      context: ./
+      dockerfile: CosmosProposalBot/Dockerfile
+    depends_on:
+      - "copr-db"
