@@ -31,6 +31,7 @@ jobs:
       # This is used to complete the identity challenge
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@1.4.0
 
     steps:
       - name: Checkout repository
