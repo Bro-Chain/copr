@@ -22,8 +22,9 @@ public class SubscriptionHelper
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-
-        if( !await PermissionHelper.EnsureUserHasPermission( context, dbContext ) )
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<PermissionHelper>();
+        
+        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
         {
             await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
             return;
@@ -104,8 +105,9 @@ public class SubscriptionHelper
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<PermissionHelper>();
 
-        if( !await PermissionHelper.EnsureUserHasPermission( context, dbContext ) )
+        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
         {
             await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
             return;

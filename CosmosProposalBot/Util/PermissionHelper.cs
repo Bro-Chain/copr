@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CosmosProposalBot.Util;
 
-public static class PermissionHelper
+public class PermissionHelper
 {
-    public static async Task<bool> EnsureUserHasPermission( IInteractionContext context, CopsDbContext dbContext )
+    public async Task<bool> EnsureUserHasPermission( IInteractionContext context, CopsDbContext dbContext )
     {
         var userRoles = ( context.User as IGuildUser ).RoleIds;
         
