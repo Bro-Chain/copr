@@ -1,25 +1,26 @@
-﻿using Azure;
-using Azure.Storage.Blobs;
-using CosmosProposalBot.Configuration;
+﻿using CosmosProposalBot.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CosmosProposalBot.Services;
+namespace CosmosProposalBot.Util;
 
 public class ImageFetcher
 {
     private readonly ILogger<ImageFetcher> _logger;
     private readonly IOptions<BotOptions> _options;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IServiceProvider _serviceProvider;
     private readonly bool _isEnabled = true;
 
     public ImageFetcher(
         ILogger<ImageFetcher> logger,
         IOptions<BotOptions> options,
+        IHttpClientFactory httpClientFactory,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
         _options = options;
+        _httpClientFactory = httpClientFactory;
         _serviceProvider = serviceProvider;
 
         if( string.IsNullOrEmpty( _options.Value.BlobStorageUrl ) ||
@@ -50,22 +51,14 @@ public class ImageFetcher
             return sourceUrl;
         }
 
-        var blobClient = CreateBlobServiceClient( chainName );
-        if( await blobClient.ExistsAsync() )
+        var client = _httpClientFactory.CreateClient(_options.Value.BlobStorageUrl!);
+        var fullUrl = $"{_options.Value.BlobStorageUrl!}/{_options.Value.BlobStorageContainerName!}/{chainName}.png";
+        var result = await client.GetAsync(fullUrl, HttpCompletionOption.ResponseHeadersRead);
+        if( result.IsSuccessStatusCode )
         {
-            _logger.LogDebug("Returning cached {ChainName} image, '{Url}'", chainName, blobClient.Uri);
-            return blobClient.Uri.ToString();
+            return fullUrl;
         }
+        
         return default;
-    }
-
-    private BlobClient CreateBlobServiceClient( string filename )
-    {
-        var serviceClient = new BlobServiceClient( 
-            new Uri( _options.Value.BlobStorageUrl! )
-            , new AzureSasCredential( _options.Value.BlobStorageSharedAccessToken! ) );
-
-        var containerClient = serviceClient.GetBlobContainerClient( _options.Value.BlobStorageContainerName );
-        return containerClient.GetBlobClient( $"{filename}.png" );
     }
 }

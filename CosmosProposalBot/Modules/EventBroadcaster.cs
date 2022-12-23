@@ -3,7 +3,7 @@ using System.Text;
 using CosmosProposalBot.Data;
 using CosmosProposalBot.Data.Model;
 using CosmosProposalBot.Model;
-using CosmosProposalBot.Services;
+using CosmosProposalBot.Util;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
