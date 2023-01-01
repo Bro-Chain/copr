@@ -32,7 +32,7 @@ public class ImageFetcher
         }
     }
 
-    public async Task<string?> FetchImage( string sourceUrl, string chainName )
+    public async Task<string?> FetchImage( string? sourceUrl, string chainName )
     {
         if( !_isEnabled )
         {

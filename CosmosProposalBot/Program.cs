@@ -2,6 +2,7 @@
 using CosmosProposalBot.Configuration;
 using CosmosProposalBot.Data;
 using CosmosProposalBot.Modules;
+using CosmosProposalBot.Services;
 using CosmosProposalBot.Util;
 using Discord;
 using Discord.Interactions;
