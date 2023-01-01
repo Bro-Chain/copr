@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
-namespace CosmosProposalBot;
+namespace CosmosProposalBot.Services;
 
 
 
