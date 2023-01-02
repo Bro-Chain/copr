@@ -39,7 +39,7 @@ public class ModalHandler
         switch( modal.Data.CustomId )
         {
             case "custom-endpoint":
-                await HandleCustomEndpointModalAsync( ctx, modal );
+                await HandleCustomEndpointModalAsync( modal );
                 break;
             case "custom-chain":
                 await HandleCustomChainModalAsync( ctx, modal );
@@ -50,7 +50,7 @@ public class ModalHandler
         }
     }
 
-    private async Task HandleCustomEndpointModalAsync( SocketInteractionContext ctx, SocketModal modal )
+    private async Task HandleCustomEndpointModalAsync( SocketModal modal )
     {
         await modal.RespondAsync( "Verifying...", ephemeral: true );
 
