@@ -14,4 +14,5 @@ public class Chain
     public ulong? CustomForGuildId { get; set; }
     
     public string? LinkPattern { get; set; }
+    public string? ChainId { get; set; }
 }

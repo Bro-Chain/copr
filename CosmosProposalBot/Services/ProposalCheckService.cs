@@ -139,7 +139,7 @@ public class ProposalCheckService : IHostedService
 
                     if( latestBlockInfo?.Block?.Header?.Time < DateTime.UtcNow.AddMinutes( -5 ) )
                     {
-                        _logger.LogWarning( $"Block is too old ({latestBlockInfo?.Block?.Header?.Time} < UTC NOW - 5min). Skipping provider REST {restEndpoint.Provider}.." );
+                        _logger.LogWarning( $"Block is too old ({latestBlockInfo?.Block?.Header?.Time} < UTC NOW - 5min). Skipping {chain.Name} REST provider {restEndpoint.Provider}.." );
                         continue;
                     }
                 }
