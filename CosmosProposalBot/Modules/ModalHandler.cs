@@ -22,8 +22,8 @@ public class ModalHandler
     private readonly IOptions<BotOptions> _options;
     private readonly IServiceProvider _serviceProvider;
 
-    private readonly Regex _chainNameRegex = new (@"^[A-Za-z][\w\d\-]{5,31}$");
-    private readonly Regex _providerNameRegex = new (@"^[A-Za-z][\w\d\-]{2,31}$");
+    private readonly Regex _chainNameRegex = new (@"^[A-Za-z][\w\d\-]{5,31}$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private readonly Regex _providerNameRegex = new (@"^[A-Za-z][\w\d\-]{2,31}$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
     
     public ModalHandler( ILogger<ModalHandler> logger,
         IOptions<BotOptions> options,
