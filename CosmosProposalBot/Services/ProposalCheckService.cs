@@ -13,8 +13,6 @@ using Newtonsoft.Json;
 
 namespace CosmosProposalBot.Services;
 
-
-
 public class ProposalCheckService : IHostedService
 {
     private readonly ILogger<ProposalCheckService> _logger;

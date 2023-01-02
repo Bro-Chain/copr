@@ -170,8 +170,35 @@ public class ConfigModule : InteractionModuleBase
         }
     }
 
+    [SlashCommand( "add-endpoint", "Add a REST endpoint for a chain" )]
+    public async Task AddEndpoint()
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+
+        if( !await PermissionHelper.EnsureUserHasPermission( Context, dbContext ) )
+        {
+            await FollowupAsync( "You do not have permission to use this command", ephemeral: true );
+            return;
+        }
+        
+        var mb = new ModalBuilder()
+            .WithTitle( "Add custom REST endpoint" )
+            .WithCustomId( "custom-endpoint" )
+            .AddTextInput( "Chain Name", "chain-name", TextInputStyle.Short, "myTestnet", 6, 32, true )
+            .AddTextInput("REST Endpoint", "rest-endpoint", TextInputStyle.Short, "https://some-testnet.xyz", 16, 256, true)
+            .AddTextInput( "REST Endpoint Provider", "provider-name", TextInputStyle.Short, "Brochain", 3, 32, true );
+        await RespondWithModalAsync( mb.Build() );
+    }
+
+    [SlashCommand( "remove-endpoint", "Remove a REST endpoint for a chain" )]
+    public async Task RemoveEndpoint()
+    {
+        throw new NotImplementedException();
+    }
+
     [SlashCommand( "add-custom-chain", "Start tracking a custom chain (such as a testnet)" )]
-    public async Task AddCustomChain( )
+    public async Task AddCustomChain()
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
@@ -187,6 +214,7 @@ public class ConfigModule : InteractionModuleBase
             .WithCustomId( "custom-chain" )
             .AddTextInput( "Chain Name", "chain-name", TextInputStyle.Short, "myTestnet", 6, 32, true )
             .AddTextInput("REST Endpoint", "rest-endpoint", TextInputStyle.Short, "https://some-testnet.xyz", 16, 256, true)
+            .AddTextInput( "REST Endpoint Provider", "provider-name", TextInputStyle.Short, "Brochain", 3, 32, true )
             .AddTextInput("Governance url", "gov-url", TextInputStyle.Short, "https://www.mintscan.io/cosmos/proposals", 16, 256, false)
             .AddTextInput("Image URL", "image-url", TextInputStyle.Short, "https://some-website.xyz/logo.png", 16, 256, false);
         await RespondWithModalAsync( mb.Build() );

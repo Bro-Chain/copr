@@ -23,6 +23,7 @@ public class ModalHandler
     private readonly IServiceProvider _serviceProvider;
 
     private readonly Regex _chainNameRegex = new (@"^[A-Za-z][\w\d\-]{5,31}$");
+    private readonly Regex _providerNameRegex = new (@"^[A-Za-z][\w\d\-]{2,31}$");
     
     public ModalHandler( ILogger<ModalHandler> logger,
         IOptions<BotOptions> options,
@@ -37,6 +38,9 @@ public class ModalHandler
     {
         switch( modal.Data.CustomId )
         {
+            case "custom-endpoint":
+                await HandleCustomEndpointModalAsync( ctx, modal );
+                break;
             case "custom-chain":
                 await HandleCustomChainModalAsync( ctx, modal );
                 break;
@@ -45,17 +49,15 @@ public class ModalHandler
                 break;
         }
     }
-    
-    private async Task HandleCustomChainModalAsync( SocketInteractionContext ctx, SocketModal modal )
-    {
-        await modal.RespondAsync( "Verifying...", ephemeral: true );
+
+    private async Task HandleCustomEndpointModalAsync( SocketInteractionContext ctx, SocketModal modal )
+    {await modal.RespondAsync( "Verifying...", ephemeral: true );
 
         var chainNameComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "chain-name" );
+        var providerNameComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "provider-name" );
         var restEndpointComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "rest-endpoint" );
-        var governanceUrlComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "gov-url" );
-        var imageUrlComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "image-url" );
         
-        if(chainNameComponent == null || restEndpointComponent == null)
+        if(chainNameComponent == null || providerNameComponent == null || restEndpointComponent == null)
         {
             await modal.FollowupAsync( "Input was malformed. Please contact my developers." );
             return;
@@ -64,6 +66,131 @@ public class ModalHandler
         if( !_chainNameRegex.IsMatch( chainNameComponent.Value ) )
         {
             await modal.FollowupAsync("Chain name is invalid. It must start with an alphabetic character, is otherwise alphanumeric plus dashes ('-'), and be between 6 and 32 characters long.", ephemeral: true);
+            return;
+        }
+        
+        if( !_providerNameRegex.IsMatch( providerNameComponent.Value ) )
+        {
+            await modal.FollowupAsync("Provider name is invalid. It must start with an alphabetic character, is otherwise alphanumeric plus dashes ('-'), and be between 3 and 32 characters long.", ephemeral: true);
+            return;
+        }
+
+        if( string.IsNullOrEmpty(restEndpointComponent.Value) ||
+            !restEndpointComponent.Value.StartsWith("https://") || 
+            !Uri.TryCreate(restEndpointComponent.Value, UriKind.Absolute, out _))
+        {
+            await modal.FollowupAsync("Rest endpoint name is invalid. It must start with https://, be a valid address, and be between 6 and 32 characters long. If no port is specified, 443 is assumed.", ephemeral: true);
+            return;
+        }
+        
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
+        var result = await RestRequestHelper.RequestWithRetry<BlockInfoResult>( httpClientFactory, restEndpointComponent.Value, "cosmos/base/tendermint/v1beta1/blocks/latest", _options.Value );
+        if( result.Outcome == OutcomeType.Failure )
+        {
+            await modal.FollowupAsync( $"Failed to connect to the rest endpoint: {result.FinalException.Message}", ephemeral: true );
+            return;
+        }
+
+        if( result.Result?.Block?.Header?.Height == null )
+        {
+            await modal.FollowupAsync( "Failed to connect to the rest endpoint: The endpoint did not return a valid block height.", ephemeral: true );
+            return;
+        }
+
+        await modal.FollowupAsync( $"Successfully validated the endpoint. Attempting to add it to the list of endpoints for {chainNameComponent.Value}...", ephemeral: true );
+
+        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        
+        var chain = await dbContext.Chains
+            .Include( c => c.Endpoints )
+            .FirstOrDefaultAsync( c => 
+                c.Name == chainNameComponent.Value );
+
+        if( chain == null )
+        {
+            await modal.FollowupAsync( $"There is no chain registered by name {chainNameComponent.Value}. Please check your input and try again", ephemeral: true );
+            return;
+        }
+
+        var existingEndpointByProvider = chain.Endpoints.FirstOrDefault( e => e.Url == providerNameComponent.Value );
+        if( existingEndpointByProvider != null )
+        {
+            await modal.FollowupAsync( $"There already is an endpoint registered under provider name {providerNameComponent.Value}. If you wish to update it, please remove the old one first", ephemeral: true );
+            return;
+        }
+        
+        var existingEndpointByUrl = chain.Endpoints.FirstOrDefault( e => e.Url == restEndpointComponent.Value );
+        if( existingEndpointByUrl != null )
+        {
+            await modal.FollowupAsync( $"There already is an endpoint registered under provider name {providerNameComponent.Value} using the url {restEndpointComponent.Value}. If you wish to update it, please remove the old one first", ephemeral: true );
+            return;
+        }
+
+        var newEndpoint = new Endpoint()
+        {
+            Chain = chain,
+            Provider = providerNameComponent.Value,
+            Type = EndpointType.Rest,
+            Url = restEndpointComponent.Value
+        };
+        chain.Endpoints.Add( newEndpoint );
+        dbContext.Endpoints.Add( newEndpoint );
+        await dbContext.SaveChangesAsync();
+
+        var imageFetcher = _serviceProvider.GetService<ImageFetcher>()!;
+        
+        var eb = new EmbedBuilder()
+            .WithTitle("Added endpoint to chain tracking")
+            .WithThumbnailUrl( await imageFetcher.FetchImage( chain.ImageUrl, chain.Name ) )
+            .WithColor( Color.Green )
+            .WithFields( 
+                new EmbedFieldBuilder()
+                    .WithName("Chain name")
+                    .WithValue( chainNameComponent.Value ),
+                new EmbedFieldBuilder()
+                    .WithName("Chain id")
+                    .WithValue( result.Result.Block.Header.ChainId ),
+                new EmbedFieldBuilder()
+                    .WithName("Endpoint")
+                    .WithValue( restEndpointComponent.Value ),
+                new EmbedFieldBuilder()
+                    .WithName("Reported last block time")
+                    .WithValue( $"{result.Result.Block.Header.Time:yyyy-MM-dd HH:mm:ss} UTC" )
+                    .WithIsInline(true),
+                new EmbedFieldBuilder()
+                    .WithName("Reported last block height")
+                    .WithValue( result.Result.Block.Header.Height)
+                    .WithIsInline( true ));
+            
+        await modal.FollowupAsync( "Done!", embed: eb.Build(), ephemeral: false);
+    }
+
+    private async Task HandleCustomChainModalAsync( SocketInteractionContext ctx, SocketModal modal )
+    {
+        await modal.RespondAsync( "Verifying...", ephemeral: true );
+
+        var chainNameComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "chain-name" );
+        var restEndpointComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "rest-endpoint" );
+        var providerNameComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "provider-name" );
+        var governanceUrlComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "gov-url" );
+        var imageUrlComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "image-url" );
+        
+        if(chainNameComponent == null || providerNameComponent == null || restEndpointComponent == null)
+        {
+            await modal.FollowupAsync( "Input was malformed. Please contact my developers." );
+            return;
+        }
+
+        if( !_chainNameRegex.IsMatch( chainNameComponent.Value ) )
+        {
+            await modal.FollowupAsync("Chain name is invalid. It must start with an alphabetic character, is otherwise alphanumeric plus dashes ('-'), and be between 6 and 32 characters long.", ephemeral: true);
+            return;
+        }
+        
+        if( !_providerNameRegex.IsMatch( providerNameComponent.Value ) )
+        {
+            await modal.FollowupAsync("Provider name is invalid. It must start with an alphabetic character, is otherwise alphanumeric plus dashes ('-'), and be between 3 and 32 characters long.", ephemeral: true);
             return;
         }
 
@@ -115,7 +242,7 @@ public class ModalHandler
             new()
             {
                 Chain = newChain,
-                Provider = Guid.NewGuid().ToString(),
+                Provider = providerNameComponent.Value,
                 Type = EndpointType.Rest,
                 Url = restEndpointComponent.Value
             }
