@@ -51,7 +51,8 @@ public class ModalHandler
     }
 
     private async Task HandleCustomEndpointModalAsync( SocketInteractionContext ctx, SocketModal modal )
-    {await modal.RespondAsync( "Verifying...", ephemeral: true );
+    {
+        await modal.RespondAsync( "Verifying...", ephemeral: true );
 
         var chainNameComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "chain-name" );
         var providerNameComponent = modal.Data.Components.FirstOrDefault( c => c.CustomId == "provider-name" );
@@ -104,8 +105,7 @@ public class ModalHandler
         
         var chain = await dbContext.Chains
             .Include( c => c.Endpoints )
-            .FirstOrDefaultAsync( c => 
-                c.Name == chainNameComponent.Value );
+            .FirstOrDefaultAsync( c => c.Name == chainNameComponent.Value );
 
         if( chain == null )
         {
@@ -113,7 +113,7 @@ public class ModalHandler
             return;
         }
 
-        var existingEndpointByProvider = chain.Endpoints.FirstOrDefault( e => e.Url == providerNameComponent.Value );
+        var existingEndpointByProvider = chain.Endpoints.FirstOrDefault( e => e.Provider == providerNameComponent.Value );
         if( existingEndpointByProvider != null )
         {
             await modal.FollowupAsync( $"There already is an endpoint registered under provider name {providerNameComponent.Value}. If you wish to update it, please remove the old one first", ephemeral: true );
@@ -147,10 +147,15 @@ public class ModalHandler
             .WithFields( 
                 new EmbedFieldBuilder()
                     .WithName("Chain name")
-                    .WithValue( chainNameComponent.Value ),
+                    .WithValue( chainNameComponent.Value )
+                    .WithIsInline(true),
                 new EmbedFieldBuilder()
                     .WithName("Chain id")
-                    .WithValue( result.Result.Block.Header.ChainId ),
+                    .WithValue( result.Result.Block.Header.ChainId )
+                    .WithIsInline(true),
+                new EmbedFieldBuilder()
+                    .WithName("Provider")
+                    .WithValue( providerNameComponent.Value ),
                 new EmbedFieldBuilder()
                     .WithName("Endpoint")
                     .WithValue( restEndpointComponent.Value ),

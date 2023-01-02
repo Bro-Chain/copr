@@ -192,9 +192,35 @@ public class ConfigModule : InteractionModuleBase
     }
 
     [SlashCommand( "remove-endpoint", "Remove a REST endpoint for a chain" )]
-    public async Task RemoveEndpoint()
+    public async Task RemoveEndpoint( string chainName, string providerName )
     {
-        throw new NotImplementedException();
+        await RespondAsync( "Verifying...", ephemeral: true );
+
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        
+        var chain = await dbContext.Chains
+            .Include( c => c.Endpoints )
+            .FirstOrDefaultAsync( c => c.Name == chainName );
+        
+        if( chain == null )
+        {
+            await FollowupAsync( $"There is no chain registered by name {chainName}. Please check your input and try again", ephemeral: true );
+            return;
+        }
+
+        var existingEndpointByProvider = chain.Endpoints.FirstOrDefault( e => e.Provider == providerName );
+        if( existingEndpointByProvider == null )
+        {
+            await FollowupAsync( $"There is no endpoint registered under provider name {providerName}", ephemeral: true );
+            return;
+        }
+
+        chain.Endpoints.Remove( existingEndpointByProvider );
+        dbContext.Endpoints.Remove( existingEndpointByProvider );
+        await dbContext.SaveChangesAsync();
+        
+        await FollowupAsync( $"Endpoint for provider {providerName} on {chainName} removed!", ephemeral: false);
     }
 
     [SlashCommand( "add-custom-chain", "Start tracking a custom chain (such as a testnet)" )]
