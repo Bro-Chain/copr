@@ -105,6 +105,7 @@ public class ModalHandler
         var newChain = new Chain
         {
             Name = chainNameComponent.Value,
+            ChainId = result.Result.Block.Header.ChainId,
             LinkPattern = governanceUrlComponent?.Value,
             ImageUrl = imageUrlComponent?.Value,
             CustomForGuildId = ctx.Guild.Id
