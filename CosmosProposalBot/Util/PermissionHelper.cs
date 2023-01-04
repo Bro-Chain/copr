@@ -14,22 +14,24 @@ public class PermissionHelper
             .Include( g => g.AdminRoles )
             .Include( g => g.AdminUsers )
             .SingleOrDefaultAsync( g => g.GuildId == context.Guild.Id );
-        if( guild != default )
+        if( guild == default )
         {
-            if( !guild.AdminRoles.Any() || 
-                guild.AdminRoles.Any( r => userRoles.Contains( r.RoleId ) ) )
-            {
-                // We good
-            }
-            else if( !guild.AdminRoles.Any() || 
-                     guild.AdminUsers.Any( u => u.UserId != context.User.Id ) )
-            {
-                // We good
-            }
-            else
-            {
-                return false;
-            }                
+            return false;
+        }
+
+        if( !guild.AdminRoles.Any() || 
+            guild.AdminRoles.Any( r => userRoles.Contains( r.RoleId ) ) )
+        {
+            // We good
+        }
+        else if( !guild.AdminUsers.Any() || 
+                 guild.AdminUsers.Any( u => u.UserId != context.User.Id ) )
+        {
+            // We good
+        }
+        else
+        {
+            return false;
         }
 
         return true;
