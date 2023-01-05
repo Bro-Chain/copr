@@ -36,7 +36,7 @@ public class UnsubscribeModule : InteractionModuleBase
             await DeferAsync( ephemeral: true );
 
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<SubscriptionHelper>();
+            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
             
             await subscriptionHelper.UnsubscribeDm( Context, chainName );
         }
@@ -55,7 +55,7 @@ public class UnsubscribeModule : InteractionModuleBase
             await DeferAsync();
 
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<SubscriptionHelper>();
+            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
             
             await subscriptionHelper.UnsubscribeChannel( Context, chainName );
         }

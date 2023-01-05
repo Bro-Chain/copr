@@ -72,7 +72,7 @@ public class SubscribeModule : InteractionModuleBase
             await DeferAsync( ephemeral: true );
 
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<SubscriptionHelper>();
+            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
             
             await subscriptionHelper.SubscribeDm( Context, chainName );
         }
@@ -91,7 +91,7 @@ public class SubscribeModule : InteractionModuleBase
             await DeferAsync();
 
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<SubscriptionHelper>();
+            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
             
             await subscriptionHelper.SubscribeChannel( Context, chainName );
         }

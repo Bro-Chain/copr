@@ -36,8 +36,9 @@ public class ConfigModule : InteractionModuleBase
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
-            if( !await PermissionHelper.EnsureUserHasPermission( Context, dbContext ) )
+            if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
             {
                 await FollowupAsync( "You do not have permission to use this command", ephemeral: true );
                 return;
@@ -88,8 +89,9 @@ public class ConfigModule : InteractionModuleBase
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
-            if( !await PermissionHelper.EnsureUserHasPermission( Context, dbContext ) )
+            if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
             {
                 await FollowupAsync( "You do not have permission to use this command", ephemeral: true );
                 return;
@@ -131,8 +133,9 @@ public class ConfigModule : InteractionModuleBase
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
-            if( !await PermissionHelper.EnsureUserHasPermission( Context, dbContext ) )
+            if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
             {
                 await FollowupAsync( "You do not have permission to use this command", ephemeral: true );
                 return;
@@ -175,8 +178,9 @@ public class ConfigModule : InteractionModuleBase
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
-        if( !await PermissionHelper.EnsureUserHasPermission( Context, dbContext ) )
+        if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
         {
             await FollowupAsync( "You do not have permission to use this command", ephemeral: true );
             return;
@@ -228,8 +232,9 @@ public class ConfigModule : InteractionModuleBase
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
-        if( !await PermissionHelper.EnsureUserHasPermission( Context, dbContext ) )
+        if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
         {
             await FollowupAsync( "You do not have permission to use this command", ephemeral: true );
             return;
@@ -253,8 +258,9 @@ public class ConfigModule : InteractionModuleBase
         
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
-        if( !await PermissionHelper.EnsureUserHasPermission( Context, dbContext ) )
+        if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
         {
             await FollowupAsync( "You do not have permission to use this command", ephemeral: true );
             return;

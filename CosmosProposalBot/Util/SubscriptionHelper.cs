@@ -7,7 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace CosmosProposalBot.Util;
 
-public class SubscriptionHelper
+public interface ISubscriptionHelper
+{
+    Task SubscribeChannel( IInteractionContext context, string chainName );
+    Task SubscribeDm( IInteractionContext context, string chainName );
+    Task UnsubscribeChannel( IInteractionContext context, string chainName );
+    Task UnsubscribeDm( IInteractionContext context, string chainName );
+}
+
+public class SubscriptionHelper : ISubscriptionHelper
 {
     private readonly ILogger<SubscriptionHelper> _logger;
     private readonly IServiceProvider _serviceProvider;
@@ -22,8 +30,9 @@ public class SubscriptionHelper
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-
-        if( !await PermissionHelper.EnsureUserHasPermission( context, dbContext ) )
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
+        
+        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
         {
             await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
             return;
@@ -104,8 +113,9 @@ public class SubscriptionHelper
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
-        if( !await PermissionHelper.EnsureUserHasPermission( context, dbContext ) )
+        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
         {
             await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
             return;

@@ -33,9 +33,10 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<InteractionService>();
         services.AddTransient<EventBroadcaster>();
         services.AddTransient<ImageFetcher>();
-        services.AddTransient<SubscriptionHelper>();
         services.AddTransient<ModalHandler>();
         services.AddTransient<ButtonHandler>();
+        services.AddTransient<ISubscriptionHelper,SubscriptionHelper>();
+        services.AddTransient<IPermissionHelper,PermissionHelper>();
         
         services.AddDbContext<CopsDbContext>(options =>
             options

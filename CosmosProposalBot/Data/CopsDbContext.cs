@@ -8,12 +8,12 @@ namespace CosmosProposalBot.Data;
 
 public class CopsDbContext : DbContext
 {
-    public DbSet<ChannelSubscription> ChannelSubscriptions { get; set; }
-    public DbSet<UserSubscription> UserSubscriptions { get; set; }
-    public DbSet<Chain> Chains { get; set; }
-    public DbSet<Guild> Guilds { get; set; }
-    public DbSet<Endpoint> Endpoints { get; set; }
-    public DbSet<Proposal> Proposals { get; set; }
+    public virtual DbSet<ChannelSubscription> ChannelSubscriptions { get; set; }
+    public virtual DbSet<UserSubscription> UserSubscriptions { get; set; }
+    public virtual DbSet<Chain> Chains { get; set; }
+    public virtual DbSet<Guild> Guilds { get; set; }
+    public virtual DbSet<Endpoint> Endpoints { get; set; }
+    public virtual DbSet<Proposal> Proposals { get; set; }
 
     public CopsDbContext( DbContextOptions<CopsDbContext> options )
         :base( options )

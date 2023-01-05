@@ -4,9 +4,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CosmosProposalBot.Util;
 
-public static class PermissionHelper
+public interface IPermissionHelper
 {
-    public static async Task<bool> EnsureUserHasPermission( IInteractionContext context, CopsDbContext dbContext )
+    Task<bool> EnsureUserHasPermission( IInteractionContext context, CopsDbContext dbContext );
+}
+
+public class PermissionHelper : IPermissionHelper
+{
+    public async Task<bool> EnsureUserHasPermission( IInteractionContext context, CopsDbContext dbContext )
     {
         var userRoles = ( context.User as IGuildUser ).RoleIds;
         
@@ -14,22 +19,24 @@ public static class PermissionHelper
             .Include( g => g.AdminRoles )
             .Include( g => g.AdminUsers )
             .SingleOrDefaultAsync( g => g.GuildId == context.Guild.Id );
-        if( guild != default )
+        if( guild == default )
         {
-            if( !guild.AdminRoles.Any() || 
-                guild.AdminRoles.Any( r => userRoles.Contains( r.RoleId ) ) )
-            {
-                // We good
-            }
-            else if( !guild.AdminRoles.Any() || 
-                     guild.AdminUsers.Any( u => u.UserId != context.User.Id ) )
-            {
-                // We good
-            }
-            else
-            {
-                return false;
-            }                
+            return false;
+        }
+
+        if( !guild.AdminRoles.Any() || 
+            guild.AdminRoles.Any( r => userRoles.Contains( r.RoleId ) ) )
+        {
+            // We good
+        }
+        else if( !guild.AdminUsers.Any() || 
+                 guild.AdminUsers.Any( u => u.UserId != context.User.Id ) )
+        {
+            // We good
+        }
+        else
+        {
+            return false;
         }
 
         return true;
