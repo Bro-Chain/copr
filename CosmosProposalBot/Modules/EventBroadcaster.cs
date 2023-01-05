@@ -3,7 +3,7 @@ using System.Text;
 using CosmosProposalBot.Data;
 using CosmosProposalBot.Data.Model;
 using CosmosProposalBot.Model;
-using CosmosProposalBot.Services;
+using CosmosProposalBot.Util;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
@@ -119,8 +119,13 @@ public class EventBroadcaster
         var fields = new List<EmbedFieldBuilder>
         {
             new EmbedFieldBuilder()
-                .WithName( "Chain name" )
-                .WithValue( prop.Chain.Name ),
+                .WithName( "Tracking Name" )
+                .WithValue( prop.Chain.Name )
+                .WithIsInline(true),
+            new EmbedFieldBuilder()
+                .WithName( "Chain Id" )
+                .WithValue( prop.Chain.ChainId )
+                .WithIsInline(true),
             new EmbedFieldBuilder()
                 .WithName( "Description" )
                 .WithValue( TrimFieldValue(prop.Description) ),
