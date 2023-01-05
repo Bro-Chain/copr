@@ -4,7 +4,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CosmosProposalBot.Util;
 
-public class PermissionHelper
+public interface IPermissionHelper
+{
+    Task<bool> EnsureUserHasPermission( IInteractionContext context, CopsDbContext dbContext );
+}
+
+public class PermissionHelper : IPermissionHelper
 {
     public async Task<bool> EnsureUserHasPermission( IInteractionContext context, CopsDbContext dbContext )
     {

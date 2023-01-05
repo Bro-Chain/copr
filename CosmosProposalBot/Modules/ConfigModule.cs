@@ -36,7 +36,7 @@ public class ConfigModule : InteractionModuleBase
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-            var permissionHelper = scope.ServiceProvider.GetRequiredService<PermissionHelper>();
+            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
             if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
             {
@@ -89,7 +89,7 @@ public class ConfigModule : InteractionModuleBase
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-            var permissionHelper = scope.ServiceProvider.GetRequiredService<PermissionHelper>();
+            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
             if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
             {
@@ -133,7 +133,7 @@ public class ConfigModule : InteractionModuleBase
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-            var permissionHelper = scope.ServiceProvider.GetRequiredService<PermissionHelper>();
+            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
             if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
             {
@@ -178,7 +178,7 @@ public class ConfigModule : InteractionModuleBase
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-        var permissionHelper = scope.ServiceProvider.GetRequiredService<PermissionHelper>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
         if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
         {
@@ -203,7 +203,7 @@ public class ConfigModule : InteractionModuleBase
         
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-        var permissionHelper = scope.ServiceProvider.GetRequiredService<PermissionHelper>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
 
         if( !await permissionHelper.EnsureUserHasPermission( Context, dbContext ) )
         {

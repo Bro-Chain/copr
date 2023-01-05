@@ -36,7 +36,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddTransient<SubscriptionHelper>();
         services.AddTransient<ModalHandler>();
         services.AddTransient<ButtonHandler>();
-        services.AddTransient<PermissionHelper>();
+        services.AddTransient<IPermissionHelper,PermissionHelper>();
         
         services.AddDbContext<CopsDbContext>(options =>
             options
