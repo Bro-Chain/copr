@@ -21,7 +21,7 @@ public class ButtonHandler
     private readonly IOptions<BotOptions> _options;
     private readonly IServiceProvider _serviceProvider;
 
-    private readonly Regex _chainNameRegex = new (@"^[A-Za-z][\w\d\-]{5,31}$");
+    private readonly Regex _chainNameRegex = new (@"^[A-Za-z][\w\d\-]{5,31}$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
     
     public ButtonHandler( ILogger<ButtonHandler> logger,
         IOptions<BotOptions> options,
