@@ -7,7 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace CosmosProposalBot.Util;
 
-public class SubscriptionHelper
+public interface ISubscriptionHelper
+{
+    Task SubscribeChannel( IInteractionContext context, string chainName );
+    Task SubscribeDm( IInteractionContext context, string chainName );
+    Task UnsubscribeChannel( IInteractionContext context, string chainName );
+    Task UnsubscribeDm( IInteractionContext context, string chainName );
+}
+
+public class SubscriptionHelper : ISubscriptionHelper
 {
     private readonly ILogger<SubscriptionHelper> _logger;
     private readonly IServiceProvider _serviceProvider;

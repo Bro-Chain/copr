@@ -81,7 +81,7 @@ public class ButtonHandler
         }
             
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var subscriptionHelper = scope.ServiceProvider.GetRequiredService<SubscriptionHelper>();
+        var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
         await subscriptionHelper.SubscribeChannel( ctx, chainName );
     }
     
@@ -96,7 +96,7 @@ public class ButtonHandler
         }
         
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var subscriptionHelper = scope.ServiceProvider.GetRequiredService<SubscriptionHelper>();
+        var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
         await subscriptionHelper.SubscribeDm( ctx, chainName );
     }
     
@@ -111,7 +111,7 @@ public class ButtonHandler
         }
         
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var subscriptionHelper = scope.ServiceProvider.GetRequiredService<SubscriptionHelper>();
+        var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
         await subscriptionHelper.UnsubscribeDm( ctx, chainName );
     }
 }
