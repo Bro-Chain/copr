@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Tests.Util;
 
-public class PermissionHelperTests
+public class PermissionHelperTest
 {
     private readonly IFixture _fixture = FixtureFactory.CreateFixture();
     private readonly Mock<IInteractionContext> _interactionContextMock;
@@ -28,7 +28,7 @@ public class PermissionHelperTests
     private readonly ulong _guildWithUserAndRole = 40506L;
     private readonly ulong _guildWithoutUserOrRole = 50607L;
 
-    public PermissionHelperTests( )
+    public PermissionHelperTest( )
     {
         _guildMock = _fixture.Freeze<Mock<IGuild>>();
         _guildUserMock = _fixture.Freeze<Mock<IGuildUser>>();
