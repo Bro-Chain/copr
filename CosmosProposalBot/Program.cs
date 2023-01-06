@@ -50,6 +50,7 @@ var host = Host.CreateDefaultBuilder(args)
         
         services.AddHostedService<UpdateChainListService>();
         services.AddHostedService<ProposalCheckService>();
+        services.AddHostedService<UpgradeTrackingService>();
         services.AddHostedService<DiscordBotService>();
     })
     .Build();

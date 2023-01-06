@@ -5,6 +5,7 @@ using CosmosProposalBot.Data.Model;
 using CosmosProposalBot.Model;
 using CosmosProposalBot.Util;
 using Discord;
+using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -61,7 +62,7 @@ public class EventBroadcaster
                 var cb = new ComponentBuilder()
                     .WithButton("Unsubscribe", "quick-unsub-dm", ButtonStyle.Danger, new Emoji("🚫"));
 
-                await dmChannel.SendMessageAsync("", embed: await GenerateEmbed( prop, newStatus ), components: cb.Build());
+                await dmChannel.SendMessageAsync("", embed: await GenerateProposalEmbed( prop, newStatus ), components: cb.Build());
             }
             catch( Exception e )
             {
@@ -88,7 +89,7 @@ public class EventBroadcaster
                 }
                 
                 _logger.LogInformation("{ServiceName} broadcasting proposal info to {GuildName} : {ChannelName}", nameof(EventBroadcaster), guild.Name, channel.Name);
-                await channel.SendMessageAsync("", embed: await GenerateEmbed( prop, newStatus ));
+                await channel.SendMessageAsync("", embed: await GenerateProposalEmbed( prop, newStatus ));
             }
             catch( Exception e )
             {
@@ -97,7 +98,7 @@ public class EventBroadcaster
         }
     }
 
-    private async Task<Embed> GenerateEmbed( Proposal prop, string newStatus )
+    private async Task<Embed> GenerateProposalEmbed( Proposal prop, string newStatus )
     {
         var title = ( prop.Status, newStatus ) switch
         {
@@ -159,6 +160,103 @@ public class EventBroadcaster
         return eb.Build();
     }
 
+    public async Task BroadcastNewUpgradeAsync( Proposal prop, string newStatus, ProposalInfoUpgradePlan plan )
+    {
+        if( prop.ProposalType != "/cosmos.upgrade.v1beta1.SoftwareUpgradeProposal" || newStatus != "PROPOSAL_STATUS_PASSED" )
+        {
+            return;
+        }
+
+        var channelSubscriptions = await _dbContext.ChannelSubscriptions
+            .Include( s => s.Chain )
+            .Where( s => s.Chain.Id == prop.Chain.Id )
+            .ToListAsync();
+
+        var trackedEvent = new TrackedEvent
+        {
+            Proposal = prop,
+            Height = ulong.Parse( plan.Height )
+        };
+        
+        await _dbContext.AddAsync( trackedEvent );
+        
+        foreach( var sub in channelSubscriptions )
+        {
+            try
+            {
+                var guild = _socketClient.GetGuild( sub.GuildId );
+                if( guild == default )
+                {
+                    _logger.LogError("Could not find guild with id {GuildId} for subscription to proposals on {Chain}", sub.GuildId, sub.Chain.Name );
+                    continue;
+                }
+                
+                var channel = guild.GetChannel( sub.DiscordChannelId ) as ITextChannel;
+                if( channel == default )
+                {
+                    _logger.LogError("Could not find channel with id {ChannelId} for subscription to proposals on {Chain}", sub.DiscordChannelId, sub.Chain.Name );
+                    continue;
+                }
+                
+                _logger.LogInformation("{ServiceName} broadcasting upgrade info to {GuildName} : {ChannelName}", nameof(EventBroadcaster), guild.Name, channel.Name);
+
+                var threadChannel = await channel.CreateThreadAsync( $"Upgrade {prop.Chain.Name} {prop.ProposalId}" );
+                var eventThread = new TrackedEventThread
+                {
+                    ThreadId = threadChannel.Id,
+                    GuildId = guild.Id,
+                    TrackedEvent = trackedEvent
+                };
+                await _dbContext.AddAsync( eventThread );
+                trackedEvent.Threads.Add(eventThread);
+
+                await threadChannel.SendMessageAsync("New upgrade incoming!", embed: await GenerateUpgradeEmbed( prop, plan ));
+            }
+            catch( Exception e )
+            {
+                _logger.LogError($"Failed to send channel message: {e}");
+            }
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task<Embed> GenerateUpgradeEmbed( Proposal prop, ProposalInfoUpgradePlan plan )
+    {
+        var fields = new List<EmbedFieldBuilder>
+        {
+            new EmbedFieldBuilder()
+                .WithName( "Chain Name" )
+                .WithValue( prop.Chain.Name ),
+            new EmbedFieldBuilder()
+                .WithName( "Upgrade alias" )
+                .WithValue( plan.Name )
+                .WithIsInline( true ),
+            new EmbedFieldBuilder()
+                .WithName( "Upgrade height" )
+                .WithValue( plan.Height )
+                .WithIsInline( true )
+        };
+        if( !string.IsNullOrEmpty( prop.Link ) )
+        {
+            fields.Add(new EmbedFieldBuilder()
+                .WithName( "Explorer URL" )
+                .WithValue( prop.Link ));
+        }
+        
+        var eb = new EmbedBuilder()
+            .WithTitle( $"Upgrade from proposal #{prop.ProposalId}" )
+            .WithFields( fields )
+            .WithFooter( "CØPR - CØsmos PRoposal bot - by Brochain" )
+            .WithColor( Color.Green );
+
+        if(!string.IsNullOrEmpty(prop.Chain.ImageUrl))
+        {
+            eb.WithThumbnailUrl( await _imageFetcher.FetchImage( prop.Chain.ImageUrl, prop.Chain.Name ) );
+        }
+
+        return eb.Build();
+    }
+
     private static string TrimFieldValue( string value )
     {
         var modifiedValue = value
@@ -171,5 +269,5 @@ public class EventBroadcaster
 
         return modifiedValue;
     }
-    
+
 }

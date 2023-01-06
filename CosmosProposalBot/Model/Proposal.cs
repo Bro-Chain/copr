@@ -22,8 +22,7 @@ public class Proposal
     public DateTime VotingEndTime { get; set; }
     public string Title { get; set; }
     public string Description { get; set; }
-
+    
     [NotMapped]
     public string? Link => (!string.IsNullOrEmpty(this.Chain?.LinkPattern) ? $"{this.Chain.LinkPattern.TrimEnd('/')}/{ProposalId}" : null );
-
 }

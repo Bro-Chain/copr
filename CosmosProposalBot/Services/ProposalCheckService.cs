@@ -80,6 +80,7 @@ public class ProposalCheckService : IHostedService
         var httpClientFactory = outerScope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
 
         var chains = outerDbContext.Chains
+            .Where( c => c.Name == "gravitybridge")
             .Where(c => _botOptions.Value.SupportedChains.Contains( c.Name ) || c.CustomForGuildId != null )
             .ToList();
         
@@ -153,8 +154,12 @@ public class ProposalCheckService : IHostedService
                     {
                         if( existingProposal.Status != prop.Status )
                         {
-                            _logger.LogInformation( "Updating status of proposal {ProposalId} on chain {ChainName} from {OldStatus} to {NewStatus}", prop.Id, chain.Name,
-                                existingProposal.Status, prop.Status );
+                            _logger.LogInformation( "Updating status of proposal {ProposalId} on chain {ChainName} from {OldStatus} to {NewStatus}", 
+                                prop.Id, 
+                                chain.Name,
+                                existingProposal.Status, 
+                                prop.Status );
+                            
                             await eventBroadcaster.BroadcastStatusChangeAsync( existingProposal, prop.Status );
                             existingProposal.Status = prop.Status;
                             existingProposal.SubmitTime = DateTime.Parse( prop.SubmitTime, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal ).ToUniversalTime();
@@ -164,6 +169,8 @@ public class ProposalCheckService : IHostedService
                                 DateTime.Parse( prop.VotingStartTIme, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal ).ToUniversalTime();
                             existingProposal.VotingEndTime =
                                 DateTime.Parse( prop.VotingEndTime, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal ).ToUniversalTime();
+                            
+                            await eventBroadcaster.BroadcastNewUpgradeAsync( existingProposal, prop.Status, prop.Content.Plan );
                         }
                     }
                     else
@@ -186,7 +193,8 @@ public class ProposalCheckService : IHostedService
 
                         chain.Proposals.Add( newProp );
                         innerDbContext.Proposals.Add( newProp );
-
+                        
+                        await eventBroadcaster.BroadcastNewUpgradeAsync( newProp, prop.Status, prop.Content.Plan );
                     }
                 }
 
