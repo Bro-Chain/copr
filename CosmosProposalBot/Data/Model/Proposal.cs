@@ -1,16 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CosmosProposalBot.Data.Model;
-using Newtonsoft.Json;
 
-namespace CosmosProposalBot.Model;
+namespace CosmosProposalBot.Data.Model;
 
 public class Proposal
 {
     [Key] 
     public Guid Id { get; set; }
 
-    [JsonProperty("proposal_id")]
     public string ProposalId { get; set; }
     public Chain Chain { get; set; }
 
