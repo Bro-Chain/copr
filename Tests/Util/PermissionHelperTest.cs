@@ -28,7 +28,7 @@ public class PermissionHelperTest
     private readonly ulong _guildWithUserAndRole = 40506L;
     private readonly ulong _guildWithoutUserOrRole = 50607L;
 
-    public PermissionHelperTest( )
+    public PermissionHelperTest()
     {
         _guildMock = _fixture.Freeze<Mock<IGuild>>();
         _guildUserMock = _fixture.Freeze<Mock<IGuildUser>>();

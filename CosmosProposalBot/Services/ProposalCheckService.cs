@@ -98,7 +98,7 @@ public class ProposalCheckService : IHostedService
 
                     _logger.LogInformation("Updating proposals for chain {ChainName}", chain.Name);
                     
-                    var eventBroadcaster = innerScope.ServiceProvider.GetRequiredService<EventBroadcaster>();
+                    var eventBroadcaster = innerScope.ServiceProvider.GetRequiredService<IEventBroadcaster>();
                     var updatedFromVerifiedUpToDateNode = await UpdateProps(chain, innerDbContext, httpClientFactory, eventBroadcaster, token);
                     if (!updatedFromVerifiedUpToDateNode)
                     {
@@ -121,7 +121,7 @@ public class ProposalCheckService : IHostedService
         Chain chain, 
         CopsDbContext innerDbContext, 
         IHttpClientFactory httpClientFactory, 
-        EventBroadcaster eventBroadcaster, 
+        IEventBroadcaster eventBroadcaster, 
         CancellationToken token,
         bool skipVerifiedUpToDateNode = false )
     {

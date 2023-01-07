@@ -5,7 +5,17 @@ using Newtonsoft.Json;
 
 namespace CosmosProposalBot.Util;
 
-public class ApiRequestHelper
+public interface IApiRequestHelper
+{
+    Task<(bool, BlockInfoHeader?, Endpoint?)> GetBlockHeaderViaRest(
+        IHttpClientFactory httpClientFactory,
+        IReadOnlyList<Endpoint> endpoints,
+        string chainName,
+        CancellationToken token,
+        string height = "latest" );
+}
+
+public class ApiRequestHelper : IApiRequestHelper
 {
     private readonly ILogger<ApiRequestHelper> _logger;
 

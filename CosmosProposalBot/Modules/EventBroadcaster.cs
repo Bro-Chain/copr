@@ -13,7 +13,14 @@ using Microsoft.Extensions.Logging;
 
 namespace CosmosProposalBot.Modules;
 
-public class EventBroadcaster
+public interface IEventBroadcaster
+{
+    Task BroadcastStatusChangeAsync( Proposal prop, string newStatus );
+    Task BroadcastNewUpgradeAsync( Proposal prop, string newStatus, ProposalInfoUpgradePlan plan );
+    Task BroadcastUpgradeReminderAsync( TrackedEvent trackedEvent );
+}
+
+public class EventBroadcaster : IEventBroadcaster
 {
     private readonly ILogger<EventBroadcaster> _logger;
     private readonly DiscordSocketClient _socketClient;
@@ -291,7 +298,7 @@ public class EventBroadcaster
                 .WithValue( trackedEvent.Height ),
             new EmbedFieldBuilder()
                 .WithName( "Estimated upgrade time" )
-                .WithValue( trackedEvent.HeightEstimatedAt )
+                .WithValue( $"{trackedEvent.HeightEstimatedAt:yyyy-MM-dd HH:mm:ss} UTC" )
                 .WithIsInline(true),
             new EmbedFieldBuilder()
                 .WithName( "Time left" )
@@ -300,7 +307,7 @@ public class EventBroadcaster
         };
         
         var eb = new EmbedBuilder()
-            .WithTitle( $"Upgrade reminder for {trackedEvent.Proposal.Chain.Name}" )
+            .WithTitle( $"🚨 🚨 🚨 Upgrade reminder for {trackedEvent.Proposal.Chain.Name} 🚨 🚨 🚨" )
             .WithFields( fields )
             .WithFooter( "CØPR - CØsmos PRoposal bot - by Brochain" )
             .WithColor( Color.Green );
@@ -319,7 +326,7 @@ public class EventBroadcaster
         {
             return "Unknown";
         }
-        var timeLeft = trackedEventHeightEstimatedAt.Value + TimeSpan.FromMinutes( 1 );
+        var timeLeft = trackedEventHeightEstimatedAt.Value;
         if( timeLeft.TotalHours > 24 )
         {
             return $"{timeLeft.Days} day{(timeLeft.Days > 1 ? "s" : "")}";

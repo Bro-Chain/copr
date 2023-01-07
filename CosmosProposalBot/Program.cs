@@ -31,13 +31,14 @@ var host = Host.CreateDefaultBuilder(args)
         };
         services.AddSingleton( interactionServiceConfig );
         services.AddSingleton<InteractionService>();
-        services.AddTransient<EventBroadcaster>();
         services.AddTransient<ImageFetcher>();
         services.AddTransient<ModalHandler>();
         services.AddTransient<ButtonHandler>();
-        services.AddTransient<ApiRequestHelper>();
+        services.AddTransient<IEventBroadcaster, EventBroadcaster>();
+        services.AddTransient<IApiRequestHelper,ApiRequestHelper>();
         services.AddTransient<ISubscriptionHelper,SubscriptionHelper>();
         services.AddTransient<IPermissionHelper,PermissionHelper>();
+        services.AddSingleton<IUpgradeTrackingRunner, UpgradeTrackingRunner>();
         
         services.AddDbContext<CopsDbContext>(options =>
             options
