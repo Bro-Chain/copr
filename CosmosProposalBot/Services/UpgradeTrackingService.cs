@@ -56,7 +56,7 @@ public class UpgradeTrackingService : IHostedService
 
             if( _env.IsDevelopment() )
             {
-                await Task.Delay( 1000*50, cancellationToken );
+                await Task.Delay( 1000*10, cancellationToken );
             }
             else
             {
@@ -108,7 +108,7 @@ public class UpgradeTrackingService : IHostedService
                     trackedEvent.HeightEstimatedAt = DateTime.UtcNow + timeLeft;
                     
                     if( !trackedEvent.NextNotificationAtSecondsLeft.HasValue ||
-                        trackedEvent.NextNotificationAtSecondsLeft < timeLeft.TotalSeconds )
+                        timeLeft.TotalSeconds < trackedEvent.NextNotificationAtSecondsLeft )
                     {
                         var eventBroadcaster = innerScope.ServiceProvider.GetRequiredService<EventBroadcaster>();
                         await eventBroadcaster.BroadcastUpgradeReminderAsync( trackedEvent );
