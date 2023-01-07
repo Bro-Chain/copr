@@ -38,6 +38,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddTransient<IApiRequestHelper,ApiRequestHelper>();
         services.AddTransient<ISubscriptionHelper,SubscriptionHelper>();
         services.AddTransient<IPermissionHelper,PermissionHelper>();
+        services.AddSingleton<IProposalCheckRunner, ProposalCheckRunner>();
         services.AddSingleton<IUpgradeTrackingRunner, UpgradeTrackingRunner>();
         
         services.AddDbContext<CopsDbContext>(options =>
