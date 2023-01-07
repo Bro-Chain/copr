@@ -35,6 +35,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddTransient<ImageFetcher>();
         services.AddTransient<ModalHandler>();
         services.AddTransient<ButtonHandler>();
+        services.AddTransient<ApiRequestHelper>();
         services.AddTransient<ISubscriptionHelper,SubscriptionHelper>();
         services.AddTransient<IPermissionHelper,PermissionHelper>();
         

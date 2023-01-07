@@ -18,8 +18,9 @@ namespace CosmosProposalBot.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Height = table.Column<decimal>(type: "decimal(20,0)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
                     HeightEstimatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LastNotifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    NextNotificationAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {

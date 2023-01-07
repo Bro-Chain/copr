@@ -200,7 +200,7 @@ public class EventBroadcaster
                 
                 _logger.LogInformation("{ServiceName} broadcasting upgrade info to {GuildName} : {ChannelName}", nameof(EventBroadcaster), guild.Name, channel.Name);
 
-                var threadChannel = await channel.CreateThreadAsync( $"Upgrade {prop.Chain.Name} {prop.ProposalId}" );
+                var threadChannel = await channel.CreateThreadAsync( $"Upgrade {prop.Chain.Name}: {plan.Name}" );
                 var eventThread = new TrackedEventThread
                 {
                     ThreadId = threadChannel.Id,
@@ -257,6 +257,80 @@ public class EventBroadcaster
         return eb.Build();
     }
 
+    public async Task BroadcastUpgradeReminderAsync( TrackedEvent trackedEvent )
+    {
+        foreach( var thread in trackedEvent.Threads )
+        {
+            var guild = _socketClient.GetGuild( thread.GuildId );
+            if( guild == default )
+            {
+                _logger.LogError("Could not find guild with id {GuildId} for subscription to proposals on {Chain}", thread.GuildId, trackedEvent.Proposal.Chain.Name );
+                continue;
+            }
+                
+            var channel = guild.GetChannel( thread.ThreadId ) as ITextChannel;
+            if( channel == default )
+            {
+                _logger.LogError("Could not find channel with id {ChannelId} for subscription to proposals on {Chain}", thread.ThreadId, trackedEvent.Proposal.Chain.Name );
+                continue;
+            }
+            
+            await channel.SendMessageAsync("", embed: await GenerateUpgradeUpdateEmbed( trackedEvent ));
+        }
+    }
+
+    private async Task<Embed> GenerateUpgradeUpdateEmbed( TrackedEvent trackedEvent )
+    {
+        var fields = new List<EmbedFieldBuilder>
+        {
+            new EmbedFieldBuilder()
+                .WithName( "Chain Name" )
+                .WithValue( trackedEvent.Proposal.Chain.Name ),
+            new EmbedFieldBuilder()
+                .WithName( "Upgrade height" )
+                .WithValue( trackedEvent.Height ),
+            new EmbedFieldBuilder()
+                .WithName( "Estimated upgrade time" )
+                .WithValue( trackedEvent.HeightEstimatedAt )
+                .WithIsInline(true),
+            new EmbedFieldBuilder()
+                .WithName( "Time left" )
+                .WithValue( $"~ {GetRoughTimeLeft( trackedEvent.HeightEstimatedAt - DateTime.UtcNow )}" )
+                .WithIsInline(true)
+        };
+        
+        var eb = new EmbedBuilder()
+            .WithTitle( $"Upgrade reminder for {trackedEvent.Proposal.Chain.Name}" )
+            .WithFields( fields )
+            .WithFooter( "CØPR - CØsmos PRoposal bot - by Brochain" )
+            .WithColor( Color.Green );
+
+        if(!string.IsNullOrEmpty(trackedEvent.Proposal.Chain.ImageUrl))
+        {
+            eb.WithThumbnailUrl( await _imageFetcher.FetchImage( trackedEvent.Proposal.Chain.ImageUrl, trackedEvent.Proposal.Chain.Name ) );
+        }
+
+        return eb.Build();
+    }
+
+    private string GetRoughTimeLeft( TimeSpan? trackedEventHeightEstimatedAt )
+    { 
+        if( trackedEventHeightEstimatedAt == null )
+        {
+            return "Unknown";
+        }
+        var timeLeft = trackedEventHeightEstimatedAt.Value + TimeSpan.FromMinutes( 1 );
+        if( timeLeft.TotalHours > 24 )
+        {
+            return $"{timeLeft.Days} day{(timeLeft.Days > 1 ? "s" : "")}";
+        }
+        if( timeLeft.TotalMinutes > 60 )
+        {
+            return $"{timeLeft.Hours} hour{(timeLeft.Hours > 1 ? "s" : "")}";
+        }
+        return $"{timeLeft.Minutes} minute{(timeLeft.Minutes > 1 ? "s" : "")}";
+    }
+
     private static string TrimFieldValue( string value )
     {
         var modifiedValue = value
@@ -269,5 +343,4 @@ public class EventBroadcaster
 
         return modifiedValue;
     }
-
 }

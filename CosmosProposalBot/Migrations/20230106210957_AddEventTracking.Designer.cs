@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CosmosProposalBot.Migrations
 {
     [DbContext(typeof(CopsDbContext))]
-    [Migration("20230106174433_AddEventTracking")]
+    [Migration("20230106210957_AddEventTracking")]
     partial class AddEventTracking
     {
         /// <inheritdoc />
@@ -153,6 +153,54 @@ namespace CosmosProposalBot.Migrations
                     b.ToTable("Guilds");
                 });
 
+            modelBuilder.Entity("CosmosProposalBot.Data.Model.Proposal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ChainId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DepositEndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProposalId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProposalType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("SubmitTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("VotingEndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("VotingStartTime")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChainId");
+
+                    b.ToTable("Proposals");
+                });
+
             modelBuilder.Entity("CosmosProposalBot.Data.Model.TrackedEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -165,11 +213,14 @@ namespace CosmosProposalBot.Migrations
                     b.Property<DateTime?>("HeightEstimatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("LastNotifiedAt")
+                    b.Property<DateTime?>("NextNotificationAt")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("ProposalId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -227,54 +278,6 @@ namespace CosmosProposalBot.Migrations
                     b.ToTable("UserSubscriptions");
                 });
 
-            modelBuilder.Entity("CosmosProposalBot.Model.Proposal", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ChainId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("DepositEndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProposalId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProposalType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("SubmitTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("VotingEndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("VotingStartTime")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChainId");
-
-                    b.ToTable("Proposals");
-                });
-
             modelBuilder.Entity("CosmosProposalBot.Data.Model.AdminRole", b =>
                 {
                     b.HasOne("CosmosProposalBot.Data.Model.Guild", "Guild")
@@ -319,9 +322,20 @@ namespace CosmosProposalBot.Migrations
                     b.Navigation("Chain");
                 });
 
+            modelBuilder.Entity("CosmosProposalBot.Data.Model.Proposal", b =>
+                {
+                    b.HasOne("CosmosProposalBot.Data.Model.Chain", "Chain")
+                        .WithMany("Proposals")
+                        .HasForeignKey("ChainId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Chain");
+                });
+
             modelBuilder.Entity("CosmosProposalBot.Data.Model.TrackedEvent", b =>
                 {
-                    b.HasOne("CosmosProposalBot.Model.Proposal", "Proposal")
+                    b.HasOne("CosmosProposalBot.Data.Model.Proposal", "Proposal")
                         .WithMany()
                         .HasForeignKey("ProposalId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -345,17 +359,6 @@ namespace CosmosProposalBot.Migrations
                 {
                     b.HasOne("CosmosProposalBot.Data.Model.Chain", "Chain")
                         .WithMany()
-                        .HasForeignKey("ChainId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Chain");
-                });
-
-            modelBuilder.Entity("CosmosProposalBot.Model.Proposal", b =>
-                {
-                    b.HasOne("CosmosProposalBot.Data.Model.Chain", "Chain")
-                        .WithMany("Proposals")
                         .HasForeignKey("ChainId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
