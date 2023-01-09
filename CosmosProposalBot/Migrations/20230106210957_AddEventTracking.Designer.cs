@@ -4,6 +4,7 @@ using CosmosProposalBot.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CosmosProposalBot.Migrations
 {
     [DbContext(typeof(CopsDbContext))]
-    partial class CopsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20230106210957_AddEventTracking")]
+    partial class AddEventTracking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -210,8 +213,8 @@ namespace CosmosProposalBot.Migrations
                     b.Property<DateTime?>("HeightEstimatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<long?>("NextNotificationAtSecondsLeft")
-                        .HasColumnType("bigint");
+                    b.Property<DateTime?>("NextNotificationAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("ProposalId")
                         .HasColumnType("uniqueidentifier");

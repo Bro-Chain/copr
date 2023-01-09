@@ -31,12 +31,15 @@ var host = Host.CreateDefaultBuilder(args)
         };
         services.AddSingleton( interactionServiceConfig );
         services.AddSingleton<InteractionService>();
-        services.AddTransient<EventBroadcaster>();
         services.AddTransient<ImageFetcher>();
         services.AddTransient<ModalHandler>();
         services.AddTransient<ButtonHandler>();
+        services.AddTransient<IEventBroadcaster, EventBroadcaster>();
+        services.AddTransient<IApiRequestHelper,ApiRequestHelper>();
         services.AddTransient<ISubscriptionHelper,SubscriptionHelper>();
         services.AddTransient<IPermissionHelper,PermissionHelper>();
+        services.AddSingleton<IProposalCheckRunner, ProposalCheckRunner>();
+        services.AddSingleton<IUpgradeTrackingRunner, UpgradeTrackingRunner>();
         
         services.AddDbContext<CopsDbContext>(options =>
             options
@@ -50,6 +53,7 @@ var host = Host.CreateDefaultBuilder(args)
         
         services.AddHostedService<UpdateChainListService>();
         services.AddHostedService<ProposalCheckService>();
+        services.AddHostedService<UpgradeTrackingService>();
         services.AddHostedService<DiscordBotService>();
     })
     .Build();

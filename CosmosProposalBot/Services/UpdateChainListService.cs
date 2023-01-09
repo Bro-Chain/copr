@@ -120,6 +120,17 @@ public class UpdateChainListService : IHostedService
                         .ToList();
                     chain.Endpoints.AddRange( restEndpoints );
                     dbContext.Endpoints.AddRange( restEndpoints );
+                    
+                    var rpcEndpoints = chainInfo.Apis.Rpc.Where(e => !string.IsNullOrEmpty(e.Provider)).Select( e => new Endpoint
+                        {
+                            Chain = chain,
+                            Type = EndpointType.Rpc,
+                            Url = e.Address.StartsWith("http") ? e.Address : $"https://{e.Address}",
+                            Provider = e.Provider
+                        } )
+                        .ToList();
+                    chain.Endpoints.AddRange( rpcEndpoints );
+                    dbContext.Endpoints.AddRange( rpcEndpoints );
                 }
                 else
                 {
@@ -139,6 +150,28 @@ public class UpdateChainListService : IHostedService
                                 Provider = endpoint.Provider
                             };
                             chain.Endpoints.Add(newEndpoint );
+                            dbContext.Endpoints.Add( newEndpoint );
+                        }
+                        else
+                        {
+                            existingEndpoint.Url = endpoint.Address.StartsWith( "http" ) ? endpoint.Address : $"https://{endpoint.Address}";
+                        }
+                    }
+                    
+                    foreach( var endpoint in chainInfo.Apis.Rpc.Where( e => !string.IsNullOrEmpty(e.Provider)) )
+                    {
+                        var existingEndpoint = chain.Endpoints.FirstOrDefault( e => e.Provider == endpoint.Provider 
+                                                                                    && e.Type == EndpointType.Rpc );
+                        if( existingEndpoint == default )
+                        {
+                            var newEndpoint = new Endpoint
+                            {
+                                Chain = chain,
+                                Type = EndpointType.Rpc,
+                                Url = endpoint.Address.StartsWith("http") ? endpoint.Address : $"https://{endpoint.Address}",
+                                Provider = endpoint.Provider
+                            };
+                            chain.Endpoints.Add( newEndpoint);
                             dbContext.Endpoints.Add( newEndpoint );
                         }
                         else

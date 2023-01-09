@@ -4,7 +4,12 @@ using Microsoft.Extensions.Options;
 
 namespace CosmosProposalBot.Util;
 
-public class ImageFetcher
+public interface IImageFetcher
+{
+    Task<string?> FetchImage( string? sourceUrl, string chainName );
+}
+
+public class ImageFetcher : IImageFetcher
 {
     private readonly ILogger<ImageFetcher> _logger;
     private readonly IOptions<BotOptions> _options;

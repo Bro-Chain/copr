@@ -14,7 +14,11 @@ public class CopsDbContext : DbContext
     public virtual DbSet<Guild> Guilds { get; set; }
     public virtual DbSet<Endpoint> Endpoints { get; set; }
     public virtual DbSet<Proposal> Proposals { get; set; }
+    public virtual DbSet<TrackedEvent> TrackedEvents { get; set; }
 
+    public CopsDbContext( )
+    { }
+    
     public CopsDbContext( DbContextOptions<CopsDbContext> options )
         :base( options )
     {
