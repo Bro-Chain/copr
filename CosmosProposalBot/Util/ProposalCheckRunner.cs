@@ -40,7 +40,6 @@ public class ProposalCheckRunner : IProposalCheckRunner
 
     public async Task RunAsync( CancellationToken cancellationToken )
     {
-
         while ( !cancellationToken.IsCancellationRequested )
         {
             _logger.LogInformation( "{ServiceName} running at: {Time}", nameof(ProposalCheckService), DateTimeOffset.Now );
@@ -71,7 +70,6 @@ public class ProposalCheckRunner : IProposalCheckRunner
         var httpClientFactory = outerScope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
 
         var chains = outerDbContext.Chains
-            .Where( c => c.Name == "gravitybridge")
             .Where(c => _botOptions.Value.SupportedChains.Contains( c.Name ) || c.CustomForGuildId != null )
             .ToList();
         
@@ -127,9 +125,10 @@ public class ProposalCheckRunner : IProposalCheckRunner
                     var latestBlockInfoJson = await restHttpClient.GetStringAsync( $"{restEndpoint.Url}/cosmos/base/tendermint/v1beta1/blocks/latest", token );
                     var latestBlockInfo = JsonConvert.DeserializeObject<BlockInfoResult>( latestBlockInfoJson );
 
-                    if( latestBlockInfo?.Block?.Header?.Time < DateTime.UtcNow.AddMinutes( -5 ) )
+                    if( latestBlockInfo?.Block?.Header == default ||
+                        latestBlockInfo?.Block?.Header?.Time < DateTime.UtcNow.AddMinutes( -5 ) )
                     {
-                        _logger.LogWarning( $"Block is too old ({latestBlockInfo?.Block?.Header?.Time} < UTC NOW - 5min). Skipping {chain.Name} REST provider {restEndpoint.Provider}.." );
+                        _logger.LogWarning( $"Block is too old (or header missing) ({latestBlockInfo?.Block?.Header?.Time} < UTC NOW - 5min). Skipping {chain.Name} REST provider {restEndpoint.Provider}.." );
                         continue;
                     }
                 }

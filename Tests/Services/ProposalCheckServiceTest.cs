@@ -14,11 +14,9 @@ public class ProposalCheckServiceTest
     private readonly IFixture _fixture = FixtureFactory.CreateFixture();
     private readonly ProposalCheckService _service;
     private readonly Mock<IProposalCheckRunner> _proposalCheckRunnerMock;
-    private readonly Mock<IHostEnvironment> _hostEnvironmentMock;
 
     public ProposalCheckServiceTest()
     {
-        _hostEnvironmentMock = _fixture.Freeze<Mock<IHostEnvironment>>();
         _proposalCheckRunnerMock = _fixture.Freeze<Mock<IProposalCheckRunner>>();
         _service = _fixture.Create<ProposalCheckService>();
     }

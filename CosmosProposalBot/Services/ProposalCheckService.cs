@@ -9,7 +9,6 @@ public class ProposalCheckService : IHostedService
     private readonly ILogger<ProposalCheckService> _logger;
     private readonly IProposalCheckRunner _proposalCheckRunner;
     private readonly IHostEnvironment _env;
-    private readonly IServiceProvider _serviceProvider;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     
     public ProposalCheckService( 
