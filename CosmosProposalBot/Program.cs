@@ -31,9 +31,9 @@ var host = Host.CreateDefaultBuilder(args)
         };
         services.AddSingleton( interactionServiceConfig );
         services.AddSingleton<InteractionService>();
-        services.AddTransient<ImageFetcher>();
         services.AddTransient<ModalHandler>();
         services.AddTransient<ButtonHandler>();
+        services.AddTransient<IImageFetcher,ImageFetcher>();
         services.AddTransient<IEventBroadcaster, EventBroadcaster>();
         services.AddTransient<IApiRequestHelper,ApiRequestHelper>();
         services.AddTransient<ISubscriptionHelper,SubscriptionHelper>();
