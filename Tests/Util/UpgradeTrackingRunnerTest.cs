@@ -13,8 +13,8 @@ using CosmosProposalBot.Services;
 using CosmosProposalBot.Util;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using MockQueryable.Moq;
 using Moq;
+using Moq.EntityFrameworkCore;
 using Xunit;
 
 namespace Tests.Util;
@@ -52,9 +52,8 @@ public class UpgradeTrackingRunnerTest
 
     private void CommonSetup( ulong propHeight, Proposal proposal, List<TrackedEvent> trackedEvents, bool stillPending )
     {
-        var trackedEventsDbSet = trackedEvents.AsQueryable().BuildMockDbSet();
         _dbContextMock.Setup( m => m.TrackedEvents )
-            .Returns( trackedEventsDbSet.Object );
+            .ReturnsDbSet( trackedEvents );
         _apiRequestHelper
             .Setup( m => 
                 m.GetBlockHeaderViaRest( 
@@ -99,7 +98,7 @@ public class UpgradeTrackingRunnerTest
     public async Task Run_NoEvents()
     {
         _dbContextMock.Setup( m => m.TrackedEvents )
-            .Returns( new List<TrackedEvent>().AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( new List<TrackedEvent>() );
 
         var cts = new CancellationTokenSource();
         var runTask = _runner.RunAsync( cts.Token );
@@ -125,7 +124,7 @@ public class UpgradeTrackingRunnerTest
             }
         };
         _dbContextMock.Setup( m => m.TrackedEvents )
-            .Returns( trackedEvents.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( trackedEvents );
 
         var cts = new CancellationTokenSource();
         var runTask = _runner.RunAsync( cts.Token );

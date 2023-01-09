@@ -8,8 +8,8 @@ using CosmosProposalBot.Data.Model;
 using CosmosProposalBot.Util;
 using Discord;
 using FluentAssertions;
-using MockQueryable.Moq;
 using Moq;
+using Moq.EntityFrameworkCore;
 using Xunit;
 
 namespace Tests.Util;
@@ -69,7 +69,7 @@ public class PermissionHelperTest
         };
         _dbContextMock = _fixture.Freeze<Mock<CopsDbContext>>();
         _dbContextMock.Setup( m => m.Guilds )
-            .Returns( guilds.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( guilds );
 
         _permissionHelper = _fixture.Create<PermissionHelper>();
     }

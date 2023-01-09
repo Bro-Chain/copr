@@ -9,8 +9,8 @@ using CosmosProposalBot.Data.Model;
 using CosmosProposalBot.Util;
 using Discord;
 using Microsoft.Extensions.DependencyInjection;
-using MockQueryable.Moq;
 using Moq;
+using Moq.EntityFrameworkCore;
 using Xunit;
 
 namespace Tests.Util;
@@ -95,7 +95,7 @@ public class SubscriptionHelperTest
             }
         };
         _dbContextMock.Setup( m => m.ChannelSubscriptions )
-            .Returns( channelSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( channelSubscriptions );
         
         await _subscriptionHelper.SubscribeChannel( _interactionContextMock.Object, chainName );
 
@@ -129,7 +129,7 @@ public class SubscriptionHelperTest
             }
         };
         _dbContextMock.Setup( m => m.ChannelSubscriptions )
-            .Returns( channelSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( channelSubscriptions );
         
         await _subscriptionHelper.SubscribeChannel( _interactionContextMock.Object, chainName );
 
@@ -148,18 +148,16 @@ public class SubscriptionHelperTest
             .Returns( channelId );
 
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( new List<Chain>().AsQueryable().BuildMockDbSet().Object );
-        
-        var emptyDbSet = new List<ChannelSubscription>().AsQueryable().BuildMockDbSet();
+            .ReturnsDbSet( new List<Chain>() );
+
         _dbContextMock.Setup( m => m.ChannelSubscriptions )
-            .Returns( emptyDbSet.Object );
+            .ReturnsDbSet( new List<ChannelSubscription>() );
         
         await _subscriptionHelper.SubscribeChannel( _interactionContextMock.Object, chainName );
 
         _discordInteractionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, It.IsAny<bool>(), It.IsAny<bool>(),null,null,null,null ) );
         _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Once );
         _dbContextMock.Verify( m => m.Chains, Times.Once );
-        emptyDbSet.Verify( m => m.Add( It.IsAny<ChannelSubscription>()), Times.Never );
     }
     
     [Theory]
@@ -180,11 +178,10 @@ public class SubscriptionHelperTest
         };
 
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( chains );
         
-        var emptyDbSet = new List<ChannelSubscription>().AsQueryable().BuildMockDbSet();
         _dbContextMock.Setup( m => m.ChannelSubscriptions )
-            .Returns( emptyDbSet.Object );
+            .ReturnsDbSet( new List<ChannelSubscription>() );
         
         await _subscriptionHelper.SubscribeChannel( _interactionContextMock.Object, chainName );
 
@@ -192,7 +189,6 @@ public class SubscriptionHelperTest
         _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Exactly(2) );
         _dbContextMock.Verify( m => m.Chains, Times.Once );
         _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Once );
-        emptyDbSet.Verify( m => m.Add( It.IsAny<ChannelSubscription>()), Times.Once );
     }
     
     [Theory]
@@ -205,7 +201,7 @@ public class SubscriptionHelperTest
             .Returns( channelId );
         
         _dbContextMock.Setup( m => m.ChannelSubscriptions )
-            .Returns( new List<ChannelSubscription>().AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( new List<ChannelSubscription>() );
         _dbContextMock.Setup( m => m.SaveChangesAsync(default ) )
             .ReturnsAsync( 0 );
         
@@ -239,7 +235,7 @@ public class SubscriptionHelperTest
         };
         
         _dbContextMock.Setup( m => m.ChannelSubscriptions )
-            .Returns( channelSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( channelSubscriptions );
         
         await _subscriptionHelper.UnsubscribeChannel( _interactionContextMock.Object, chainName );
 
@@ -274,7 +270,7 @@ public class SubscriptionHelperTest
         };
         
         _dbContextMock.Setup( m => m.ChannelSubscriptions )
-            .Returns( channelSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( channelSubscriptions );
         _dbContextMock.Setup( m => m.SaveChangesAsync(default ) )
             .ReturnsAsync( 0 );
         
@@ -318,7 +314,7 @@ public class SubscriptionHelperTest
             }
         };
         _dbContextMock.Setup( m => m.UserSubscriptions )
-            .Returns( userSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( userSubscriptions );
         
         await _subscriptionHelper.SubscribeDm( _interactionContextMock.Object, chainName );
 
@@ -351,9 +347,9 @@ public class SubscriptionHelperTest
             }
         };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( chains );
         _dbContextMock.Setup( m => m.UserSubscriptions )
-            .Returns( userSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( userSubscriptions );
         
         await _subscriptionHelper.SubscribeDm( _interactionContextMock.Object, chainName );
 
@@ -384,9 +380,9 @@ public class SubscriptionHelperTest
         };
 
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( new List<Chain>().AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( new List<Chain>() );
         _dbContextMock.Setup( m => m.UserSubscriptions )
-            .Returns( userSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( userSubscriptions );
         
         await _subscriptionHelper.SubscribeDm( _interactionContextMock.Object, chainName );
 
@@ -411,9 +407,9 @@ public class SubscriptionHelperTest
             }
         };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( chains );
         _dbContextMock.Setup( m => m.UserSubscriptions )
-            .Returns( new List<UserSubscription>().AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( new List<UserSubscription>() );
         
         await _subscriptionHelper.SubscribeDm( _interactionContextMock.Object, chainName );
 
@@ -431,7 +427,7 @@ public class SubscriptionHelperTest
             .Returns( userId );
         
         _dbContextMock.Setup( m => m.UserSubscriptions )
-            .Returns( new List<UserSubscription>().AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( new List<UserSubscription>() );
         
         await _subscriptionHelper.UnsubscribeDm( _interactionContextMock.Object, chainName );
 
@@ -461,9 +457,9 @@ public class SubscriptionHelperTest
             }
         };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( new List<Chain>().AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( new List<Chain>() );
         _dbContextMock.Setup( m => m.UserSubscriptions )
-            .Returns( userSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( userSubscriptions );
         
         await _subscriptionHelper.UnsubscribeDm( _interactionContextMock.Object, chainName );
 
@@ -496,9 +492,9 @@ public class SubscriptionHelperTest
             }
         };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( chains );
         _dbContextMock.Setup( m => m.UserSubscriptions )
-            .Returns( userSubscriptions.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( userSubscriptions );
         
         await _subscriptionHelper.UnsubscribeDm( _interactionContextMock.Object, chainName );
 

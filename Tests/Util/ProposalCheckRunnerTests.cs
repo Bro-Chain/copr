@@ -14,7 +14,6 @@ using CosmosProposalBot.Services;
 using CosmosProposalBot.Util;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using MockQueryable.Moq;
 using Moq;
 using Moq.Contrib.HttpClient;
 using Moq.EntityFrameworkCore;
