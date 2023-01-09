@@ -358,7 +358,7 @@ public class EventBroadcaster : IEventBroadcaster
         var timeLeft = trackedEventHeightEstimatedAt.Value;
         if( timeLeft.TotalHours > 24 )
         {
-            return $"{timeLeft.Days} day{(timeLeft.Days > 1 ? "s" : "")}";
+            return $"{timeLeft.Days} day{(timeLeft.Days > 1 ? "s" : "")} {timeLeft.Hours} hour{(timeLeft.Hours > 1 ? "s" : "")}";
         }
         if( timeLeft.TotalMinutes > 60 )
         {
