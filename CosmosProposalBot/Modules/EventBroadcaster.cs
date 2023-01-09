@@ -9,6 +9,7 @@ using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CosmosProposalBot.Modules;
@@ -23,30 +24,28 @@ public interface IEventBroadcaster
 public class EventBroadcaster : IEventBroadcaster
 {
     private readonly ILogger<EventBroadcaster> _logger;
-    private readonly DiscordSocketClient _socketClient;
-    private readonly ImageFetcher _imageFetcher;
-    private readonly CopsDbContext _dbContext;
+    private readonly IServiceProvider _serviceProvider;
 
     public EventBroadcaster( 
         ILogger<EventBroadcaster> logger,
-        DiscordSocketClient socketClient,
-        ImageFetcher imageFetcher,
-        CopsDbContext dbContext )
+        IServiceProvider serviceProvider )
     {
         _logger = logger;
-        _socketClient = socketClient;
-        _imageFetcher = imageFetcher;
-        _dbContext = dbContext;
+        _serviceProvider = serviceProvider;
     }
     
     public async Task BroadcastStatusChangeAsync( Proposal prop, string newStatus )
     {
-        var dmSubscribers = await _dbContext.UserSubscriptions
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var socketClient = scope.ServiceProvider.GetRequiredService<DiscordSocketClient>();
+        
+        var dmSubscribers = await dbContext.UserSubscriptions
             .Include( s => s.Chain )
             .Where( s => s.Chain.Id == prop.Chain.Id )
             .ToListAsync();
 
-        var channelSubscriptions = await _dbContext.ChannelSubscriptions
+        var channelSubscriptions = await dbContext.ChannelSubscriptions
             .Include( s => s.Chain )
             .Where( s => s.Chain.Id == prop.Chain.Id )
             .ToListAsync();
@@ -55,7 +54,7 @@ public class EventBroadcaster : IEventBroadcaster
         {
             try
             {
-                var user = await _socketClient.GetUserAsync( sub.DiscordUserId );
+                var user = await socketClient.GetUserAsync( sub.DiscordUserId );
                 if( user == default )
                 {
                     _logger.LogError("Could not find user with id {UserId} for subscription to proposals on {Chain}", sub.DiscordUserId, sub.Chain.Name );
@@ -81,7 +80,7 @@ public class EventBroadcaster : IEventBroadcaster
         {
             try
             {
-                var guild = _socketClient.GetGuild( sub.GuildId );
+                var guild = socketClient.GetGuild( sub.GuildId );
                 if( guild == default )
                 {
                     _logger.LogError("Could not find guild with id {GuildId} for subscription to proposals on {Chain}", sub.GuildId, sub.Chain.Name );
@@ -107,6 +106,9 @@ public class EventBroadcaster : IEventBroadcaster
 
     private async Task<Embed> GenerateProposalEmbed( Proposal prop, string newStatus )
     {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var imageFetcher = scope.ServiceProvider.GetRequiredService<IImageFetcher>();
+        
         var title = ( prop.Status, newStatus ) switch
         {
             (_,"PROPOSAL_STATUS_PASSED") => "✅ PASSED",
@@ -161,7 +163,7 @@ public class EventBroadcaster : IEventBroadcaster
 
         if(!string.IsNullOrEmpty(prop.Chain.ImageUrl))
         {
-            eb.WithThumbnailUrl( await _imageFetcher.FetchImage( prop.Chain.ImageUrl, prop.Chain.Name ) );
+            eb.WithThumbnailUrl( await imageFetcher.FetchImage( prop.Chain.ImageUrl, prop.Chain.Name ) );
         }
 
         return eb.Build();
@@ -173,8 +175,12 @@ public class EventBroadcaster : IEventBroadcaster
         {
             return;
         }
+        
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var socketClient = scope.ServiceProvider.GetRequiredService<DiscordSocketClient>();
 
-        var channelSubscriptions = await _dbContext.ChannelSubscriptions
+        var channelSubscriptions = await dbContext.ChannelSubscriptions
             .Include( s => s.Chain )
             .Where( s => s.Chain.Id == prop.Chain.Id )
             .ToListAsync();
@@ -185,13 +191,13 @@ public class EventBroadcaster : IEventBroadcaster
             Height = ulong.Parse( plan.Height )
         };
         
-        await _dbContext.AddAsync( trackedEvent );
+        await dbContext.AddAsync( trackedEvent );
         
         foreach( var sub in channelSubscriptions )
         {
             try
             {
-                var guild = _socketClient.GetGuild( sub.GuildId );
+                var guild = socketClient.GetGuild( sub.GuildId );
                 if( guild == default )
                 {
                     _logger.LogError("Could not find guild with id {GuildId} for subscription to proposals on {Chain}", sub.GuildId, sub.Chain.Name );
@@ -214,7 +220,7 @@ public class EventBroadcaster : IEventBroadcaster
                     GuildId = guild.Id,
                     TrackedEvent = trackedEvent
                 };
-                await _dbContext.AddAsync( eventThread );
+                await dbContext.AddAsync( eventThread );
                 trackedEvent.Threads.Add(eventThread);
 
                 await threadChannel.SendMessageAsync("New upgrade incoming!", embed: await GenerateUpgradeEmbed( prop, plan ));
@@ -224,11 +230,14 @@ public class EventBroadcaster : IEventBroadcaster
                 _logger.LogError($"Failed to send channel message: {e}");
             }
         }
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
     }
 
     private async Task<Embed> GenerateUpgradeEmbed( Proposal prop, ProposalInfoUpgradePlan plan )
     {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var imageFetcher = scope.ServiceProvider.GetRequiredService<IImageFetcher>();
+        
         var fields = new List<EmbedFieldBuilder>
         {
             new EmbedFieldBuilder()
@@ -258,7 +267,7 @@ public class EventBroadcaster : IEventBroadcaster
 
         if(!string.IsNullOrEmpty(prop.Chain.ImageUrl))
         {
-            eb.WithThumbnailUrl( await _imageFetcher.FetchImage( prop.Chain.ImageUrl, prop.Chain.Name ) );
+            eb.WithThumbnailUrl( await imageFetcher.FetchImage( prop.Chain.ImageUrl, prop.Chain.Name ) );
         }
 
         return eb.Build();
@@ -266,9 +275,12 @@ public class EventBroadcaster : IEventBroadcaster
 
     public async Task BroadcastUpgradeReminderAsync( TrackedEvent trackedEvent )
     {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var socketClient = scope.ServiceProvider.GetRequiredService<DiscordSocketClient>();
+        
         foreach( var thread in trackedEvent.Threads )
         {
-            var guild = _socketClient.GetGuild( thread.GuildId );
+            var guild = socketClient.GetGuild( thread.GuildId );
             if( guild == default )
             {
                 _logger.LogError("Could not find guild with id {GuildId} for subscription to proposals on {Chain}", thread.GuildId, trackedEvent.Proposal.Chain.Name );
@@ -288,6 +300,9 @@ public class EventBroadcaster : IEventBroadcaster
 
     private async Task<Embed> GenerateUpgradeUpdateEmbed( TrackedEvent trackedEvent )
     {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var imageFetcher = scope.ServiceProvider.GetRequiredService<IImageFetcher>();
+        
         var fields = new List<EmbedFieldBuilder>
         {
             new EmbedFieldBuilder()
@@ -314,7 +329,7 @@ public class EventBroadcaster : IEventBroadcaster
 
         if(!string.IsNullOrEmpty(trackedEvent.Proposal.Chain.ImageUrl))
         {
-            eb.WithThumbnailUrl( await _imageFetcher.FetchImage( trackedEvent.Proposal.Chain.ImageUrl, trackedEvent.Proposal.Chain.Name ) );
+            eb.WithThumbnailUrl( await imageFetcher.FetchImage( trackedEvent.Proposal.Chain.ImageUrl, trackedEvent.Proposal.Chain.Name ) );
         }
 
         return eb.Build();

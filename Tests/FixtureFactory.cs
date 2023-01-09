@@ -9,14 +9,14 @@ public static class FixtureFactory
     public static IFixture CreateFixture()
     {
         var fixture = new Fixture();
-        
-        fixture.Customize(new CompositeCustomization(
-            new AutoMoqCustomization()
-        ));
 
         fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList()
             .ForEach(b => fixture.Behaviors.Remove(b));
         fixture.Behaviors.Add(new OmitOnRecursionBehavior());
+        
+        fixture.Customize(new CompositeCustomization(
+            new AutoMoqCustomization()
+        ));
 
         return fixture;
     }

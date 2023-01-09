@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MockQueryable.Moq;
 using Moq;
 using Moq.Contrib.HttpClient;
+using Moq.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -60,56 +61,11 @@ public class ProposalCheckRunnerTests
         _runner = _fixture.Create<ProposalCheckRunner>();
     }
 
-    private void CommonSetup( ulong propHeight, Proposal proposal, List<TrackedEvent> trackedEvents, bool stillPending )
-    {
-        var trackedEventsDbSet = trackedEvents.AsQueryable().BuildMockDbSet();
-        _dbContextMock.Setup( m => m.TrackedEvents )
-            .Returns( trackedEventsDbSet.Object );
-        _apiRequestHelper
-            .Setup( m => 
-                m.GetBlockHeaderViaRest( 
-                    It.IsAny<IHttpClientFactory>(), 
-                    proposal.Chain.Endpoints, 
-                    proposal.Chain.Name, 
-                    It.IsAny<CancellationToken>(), 
-                    "latest" ) )
-            .ReturnsAsync( ( ) => ( 
-                true, 
-                new BlockInfoHeader()
-                {
-                    Height = stillPending ? $"{propHeight - 1000}" : $"{propHeight + 2000}",
-                    ChainId = proposal.Chain.ChainId,
-                    Time = DateTime.UtcNow
-                }, 
-                new Endpoint() ) )
-            .Verifiable();
-        _apiRequestHelper
-            .Setup( m => 
-                m.GetBlockHeaderViaRest( 
-                    It.IsAny<IHttpClientFactory>(), 
-                    proposal.Chain.Endpoints, 
-                    proposal.Chain.Name, 
-                    It.IsAny<CancellationToken>(), 
-                    stillPending ? $"{propHeight - 2000}" : $"{propHeight + 1000}" ) )
-            .ReturnsAsync( ( ) => ( 
-                true, 
-                new BlockInfoHeader()
-                {
-                    Height = stillPending ? $"{propHeight - 2000}" : $"{propHeight + 1000}",
-                    ChainId = proposal.Chain.ChainId,
-                    Time = DateTime.UtcNow
-                }, 
-                new Endpoint() ) )
-            .Verifiable();
-        _dbContextMock.Setup( m => m.SaveChangesAsync( It.IsAny<CancellationToken>() ) )
-            .ReturnsAsync( 0 );
-    }
-
     [Fact]
     public async Task Run_NoChains()
     {
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( new List<Chain>().AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet( new List<Chain>() );
 
         var cts = new CancellationTokenSource();
         var runTask = _runner.RunAsync( cts.Token );
@@ -138,9 +94,8 @@ public class ProposalCheckRunnerTests
         };
 
         chain.Proposals = chain.Proposals.Take( 1 ).ToList();
-        var chains = new List<Chain> { chain };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet(new List<Chain> { chain });
 
         proposalInfo.Proposals = proposalInfo.Proposals.Take( 1 ).ToList();
         proposalInfo.Proposals.First().Id = chain.Proposals.First().ProposalId;
@@ -184,7 +139,7 @@ public class ProposalCheckRunnerTests
         chain.Proposals = chain.Proposals.Take( 1 ).ToList();
         var chains = new List<Chain> { chain };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet(chains);
 
         proposalInfo.Proposals = proposalInfo.Proposals.Take( 1 ).ToList();
         proposalInfo.Proposals.First().Id = chain.Proposals.First().ProposalId;
@@ -225,9 +180,8 @@ public class ProposalCheckRunnerTests
             }
         };
         
-        var chains = new List<Chain> { chain };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet(new List<Chain> { chain });
 
         proposalInfo.Proposals = proposalInfo.Proposals.Take( 1 ).ToList();
         proposalInfo.Proposals.First().Id = chain.Proposals.First().ProposalId;
@@ -268,9 +222,8 @@ public class ProposalCheckRunnerTests
             }
         };
         
-        var chains = new List<Chain> { chain };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet(new List<Chain> { chain });
 
         proposalInfo.Proposals = proposalInfo.Proposals.Take( 1 ).ToList();
         proposalInfo.Proposals.First().Id = chain.Proposals.First().ProposalId;
@@ -317,11 +270,10 @@ public class ProposalCheckRunnerTests
         };
         chain.Proposals.Clear();
         
-        var chains = new List<Chain> { chain };
         _dbContextMock.Setup( m => m.Chains )
-            .Returns( chains.AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet(new List<Chain> { chain });
         _dbContextMock.Setup( m => m.Proposals )
-            .Returns( new List<Proposal>().AsQueryable().BuildMockDbSet().Object );
+            .ReturnsDbSet(new List<Proposal>());
 
         proposalInfo.Proposals = proposalInfo.Proposals.Take( 1 ).ToList();
         proposalInfo.Proposals.First().SubmitTime = 
