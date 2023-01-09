@@ -23,12 +23,12 @@ public class ProposalCheckService : IHostedService
     
     public async Task StartAsync( CancellationToken cancellationToken )
     {
-        _logger.LogInformation($"Starting ${nameof(ProposalCheckService)}");
-        // Initial startup wait
+        // Allow Discord to start up.
         if( _env.IsProduction() )
         {
             await Task.Delay( 1000 * 60, cancellationToken );
         }
+        _logger.LogInformation($"Starting ${nameof(ProposalCheckService)}");
         
 #pragma warning disable CS4014
         _proposalCheckRunner.RunAsync( _cancellationTokenSource.Token );

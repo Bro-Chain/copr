@@ -83,13 +83,21 @@ public class UpgradeTrackingRunner : IUpgradeTrackingRunner
                     var (latestSuccess, latestBlockHeader, _) = await requestHelper.GetBlockHeaderViaRest( httpClientFactory, trackedEvent.Proposal.Chain.Endpoints, trackedEvent.Proposal.Chain.Name, token );
                     if( !latestSuccess )
                     {
-                        // try rpc 
+                        // try rpc
+                        (latestSuccess, latestBlockHeader, _) = await requestHelper.GetBlockHeaderViaRpc( httpClientFactory, trackedEvent.Proposal.Chain.Endpoints, trackedEvent.Proposal.Chain.Name, token );
                     }
 
                     var (historicalSuccess, historicalBlockHeader, _) = await requestHelper.GetBlockHeaderViaRest( httpClientFactory, trackedEvent.Proposal.Chain.Endpoints, trackedEvent.Proposal.Chain.Name, token, $"{latestBlockHeader.HeightNumerical - 1000L}" );
                     if( !historicalSuccess )
                     {
                         // try rpc 
+                        (historicalSuccess, historicalBlockHeader, _) = await requestHelper.GetBlockHeaderViaRpc( httpClientFactory, trackedEvent.Proposal.Chain.Endpoints, trackedEvent.Proposal.Chain.Name, token, $"{latestBlockHeader.HeightNumerical - 1000L}" );
+                    }
+
+                    if( !latestSuccess || !historicalSuccess )
+                    {
+                        _logger.LogWarning("Unable to get block headers for {ChainName}. Skipping...", trackedEvent.Proposal.Chain.Name);
+                        return;
                     }
 
                     if( trackedEvent.Height < latestBlockHeader.HeightNumerical )

@@ -80,7 +80,7 @@ public class EventBroadcasterTest
         Proposal proposal,
         ProposalInfoUpgradePlan plan)
     {
-        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, "PROPOSAL_STATUS_PASSED", plan );
+        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, Constants.ProposalStatusPassed, plan );
      
         _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Never );
         _socketClientMock.Verify( m => m.GetUser( It.IsAny<ulong>() ), Times.Never );
@@ -89,17 +89,43 @@ public class EventBroadcasterTest
 
     [Theory]
     [AutoDomainData]
-    public async Task BroadcastNewUpgradeAsync_WrongPropStatus(
+    public async Task BroadcastNewUpgradeAsync_NeitherVotingNorPassed(
         Proposal proposal,
         ProposalInfoUpgradePlan plan)
     {
-        proposal.ProposalType = "/cosmos.upgrade.v1beta1.SoftwareUpgradeProposal";
+        proposal.ProposalType = Constants.ProposalTypeSoftwareUpgrade;
         
-        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, "PROPOSAL_STATUS_DEPOSIT_PERIOD", plan );
+        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, Constants.ProposalStatusDepositPeriod, plan );
      
         _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Never );
         _socketClientMock.Verify( m => m.GetUser( It.IsAny<ulong>() ), Times.Never );
         _socketClientMock.Verify( m => m.GetGuild( It.IsAny<ulong>() ), Times.Never );
+    }
+
+    [Theory]
+    [InlineData( Constants.ProposalStatusDepositPeriod, Constants.ProposalStatusPassed, false )]
+    [InlineData( Constants.ProposalStatusDepositPeriod, Constants.ProposalStatusVotingPeriod, false )]
+    [InlineData( Constants.ProposalStatusVotingPeriod, Constants.ProposalStatusPassed, true )]
+    [InlineData( Constants.ProposalStatusVotingPeriod, Constants.ProposalStatusRejected, true )]
+    [InlineData( Constants.ProposalStatusPassed, Constants.ProposalStatusRejected, true )]
+    public async Task BroadcastNewUpgradeAsync_( string previousStatus, string newStatus, bool shouldSkip )
+    {
+        var proposal = new Proposal()
+        {
+            ProposalType = Constants.ProposalTypeSoftwareUpgrade,
+            Status = previousStatus
+        };
+        _dbContextMock.Setup( m => m.Proposals )
+            .ReturnsDbSet(new List<Proposal> { proposal });
+        _dbContextMock.Setup( m => m.ChannelSubscriptions )
+            .ReturnsDbSet(new List<ChannelSubscription>());
+        _dbContextMock.Setup( m => m.TrackedEvents )
+            .ReturnsDbSet(new List<TrackedEvent>());
+        
+        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, newStatus, new ProposalInfoUpgradePlan(){ Height = $"{1000}"} );
+     
+        _dbContextMock.Verify( m => m.Proposals, shouldSkip ? Times.Never : Times.Once );
+        _dbContextMock.Verify( m => m.ChannelSubscriptions, shouldSkip ? Times.Never : Times.Once );
     }
 
     [Theory]
@@ -109,16 +135,19 @@ public class EventBroadcasterTest
         ProposalInfoUpgradePlan plan)
     {
         plan.Height = $"{1000L}";
-        proposal.ProposalType = "/cosmos.upgrade.v1beta1.SoftwareUpgradeProposal";
+        proposal.ProposalType = Constants.ProposalTypeSoftwareUpgrade;
+        _dbContextMock.Setup( m => m.Proposals )
+            .ReturnsDbSet(new List<Proposal> { proposal });
         _dbContextMock.Setup( m => m.ChannelSubscriptions )
             .ReturnsDbSet(new List<ChannelSubscription>());
-        _dbContextMock.Setup( m => m.AddAsync( It.IsAny<TrackedEvent>(), default ) )
-            .ReturnsAsync( new EntityEntry<TrackedEvent>( null ) );
+        _dbContextMock.Setup( m => m.TrackedEvents )
+            .ReturnsDbSet(new List<TrackedEvent>());
         
-        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, "PROPOSAL_STATUS_PASSED", plan );
+        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, Constants.ProposalStatusPassed, plan );
      
+        _dbContextMock.Verify( m => m.Proposals, Times.Once );
         _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Once );
-        _dbContextMock.Verify( m => m.AddAsync( It.IsAny<TrackedEvent>(), default ), Times.Once );
+        _dbContextMock.Verify( m => m.TrackedEvents, Times.Once );
         _socketClientMock.Verify( m => m.GetUser( It.IsAny<ulong>() ), Times.Never );
         _socketClientMock.Verify( m => m.GetGuild( It.IsAny<ulong>() ), Times.Never );
     }
@@ -131,7 +160,7 @@ public class EventBroadcasterTest
     //     ProposalInfoUpgradePlan plan)
     // {
     //     plan.Height = $"{1000L}";
-    //     proposal.ProposalType = "/cosmos.upgrade.v1beta1.SoftwareUpgradeProposal";
+    //     proposal.ProposalType = Constants.ProposalTypeSoftwareUpgrade;
     //     channelSubscriptions.ForEach( s => s.Chain = proposal.Chain );
     //     _dbContextMock.Setup( m => m.ChannelSubscriptions )
     //         .ReturnsDbSet(channelSubscriptions);

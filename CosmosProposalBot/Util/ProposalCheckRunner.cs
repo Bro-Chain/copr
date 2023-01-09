@@ -70,6 +70,7 @@ public class ProposalCheckRunner : IProposalCheckRunner
         var httpClientFactory = outerScope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
 
         var chains = outerDbContext.Chains
+            // .Where( c => c.Name == "crescent" )
             .Where(c => _botOptions.Value.SupportedChains.Contains( c.Name ) || c.CustomForGuildId != null )
             .ToList();
         
@@ -92,7 +93,11 @@ public class ProposalCheckRunner : IProposalCheckRunner
                     if (!updatedFromVerifiedUpToDateNode)
                     {
                         _logger.LogWarning("Could not update proposals for chain {ChainName} from verified up to date node, trying from any node", chain.Name);
-                        await UpdateProps(chain, innerDbContext, httpClientFactory, eventBroadcaster, token, true);
+                        updatedFromVerifiedUpToDateNode = await UpdateProps(chain, innerDbContext, httpClientFactory, eventBroadcaster, token, true);
+                        if( !updatedFromVerifiedUpToDateNode )
+                        {
+                            _logger.LogWarning("Finally failed in updating proposals for chain {ChainName} from any node", chain.Name);
+                        }
                     } 
                     
                     _logger.LogTrace($"Finished with chain {chain.Name}");

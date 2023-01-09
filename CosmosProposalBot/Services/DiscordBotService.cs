@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CosmosProposalBot;
+namespace CosmosProposalBot.Services;
 
 public class DiscordBotService : IHostedService
 {

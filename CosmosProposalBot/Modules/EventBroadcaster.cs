@@ -111,18 +111,18 @@ public class EventBroadcaster : IEventBroadcaster
         
         var title = ( prop.Status, newStatus ) switch
         {
-            (_,"PROPOSAL_STATUS_PASSED") => "✅ PASSED",
-            (_,"PROPOSAL_STATUS_REJECTED") => "❌ REJECTED",
-            (_,"PROPOSAL_STATUS_VOTING_PERIOD") => "🕑 VOTING on",
+            (_,Constants.ProposalStatusPassed) => "✅ PASSED",
+            (_,Constants.ProposalStatusRejected) => "❌ REJECTED",
+            (_,Constants.ProposalStatusVotingPeriod) => "🕑 VOTING on",
             (null,_) => "New",
             _ => ""
         };
 
         var color = ( prop.Status, newStatus ) switch
         {
-            (_,"PROPOSAL_STATUS_PASSED") => Color.Green,
-            (_,"PROPOSAL_STATUS_REJECTED") => Color.Red,
-            (_,"PROPOSAL_STATUS_VOTING_PERIOD") => Color.Blue,
+            (_,Constants.ProposalStatusPassed) => Color.Green,
+            (_,Constants.ProposalStatusRejected) => Color.Red,
+            (_,Constants.ProposalStatusVotingPeriod) => Color.Blue,
             _ => Color.Default
         };
         
@@ -171,15 +171,29 @@ public class EventBroadcaster : IEventBroadcaster
 
     public async Task BroadcastNewUpgradeAsync( Proposal prop, string newStatus, ProposalInfoUpgradePlan plan )
     {
-        if( prop.ProposalType != "/cosmos.upgrade.v1beta1.SoftwareUpgradeProposal" || newStatus != "PROPOSAL_STATUS_PASSED" )
+        if( prop.ProposalType != Constants.ProposalTypeSoftwareUpgrade )
         {
             return;
         }
+        if( prop.Status == Constants.ProposalStatusVotingPeriod && newStatus == Constants.ProposalStatusPassed )
+        {
+            // assume we already knew about this upgrade as the status has previously been recorded
+            // possible bug when the bot is down for a while
+            return;
+        }
+        if( newStatus is not Constants.ProposalStatusVotingPeriod and not Constants.ProposalStatusPassed )
+        {
+            return;
+        }
+        // TODO: handle rejected upgrades
         
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
         var socketClient = scope.ServiceProvider.GetRequiredService<DiscordSocketClient>();
 
+        var localProp = await dbContext.Proposals
+            .Include( p => p.Chain )
+            .FirstOrDefaultAsync( p => p.Id == prop.Id );
         var channelSubscriptions = await dbContext.ChannelSubscriptions
             .Include( s => s.Chain )
             .Where( s => s.Chain.Id == prop.Chain.Id )
@@ -187,11 +201,11 @@ public class EventBroadcaster : IEventBroadcaster
 
         var trackedEvent = new TrackedEvent
         {
-            Proposal = prop,
+            Proposal = localProp,
             Height = ulong.Parse( plan.Height )
         };
-        
-        await dbContext.AddAsync( trackedEvent );
+
+        await dbContext.TrackedEvents.AddAsync( trackedEvent );
         
         foreach( var sub in channelSubscriptions )
         {
@@ -213,7 +227,7 @@ public class EventBroadcaster : IEventBroadcaster
                 
                 _logger.LogInformation("{ServiceName} broadcasting upgrade info to {GuildName} : {ChannelName}", nameof(EventBroadcaster), guild.Name, channel.Name);
 
-                var threadChannel = await channel.CreateThreadAsync( $"Upgrade {prop.Chain.Name}: {plan.Name}" );
+                var threadChannel = await channel.CreateThreadAsync( $"Upgrade {localProp.Chain.Name}: {plan.Name}" );
                 var eventThread = new TrackedEventThread
                 {
                     ThreadId = threadChannel.Id,
@@ -223,7 +237,7 @@ public class EventBroadcaster : IEventBroadcaster
                 await dbContext.AddAsync( eventThread );
                 trackedEvent.Threads.Add(eventThread);
 
-                await threadChannel.SendMessageAsync("New upgrade incoming!", embed: await GenerateUpgradeEmbed( prop, plan ));
+                await threadChannel.SendMessageAsync("New upgrade incoming!", embed: await GenerateUpgradeEmbed( localProp, plan ));
             }
             catch( Exception e )
             {
