@@ -48,6 +48,8 @@ public class ProposalCheckRunnerTests
         _dbContextMock = _fixture.Freeze<Mock<CopsDbContext>>();
         _dbContextMock.Setup( m => m.SaveChangesAsync( default ) )
             .ReturnsAsync( 0 );
+        _dbContextMock.Setup( m => m.SaveChangesAsync( It.IsAny<CancellationToken>() ) )
+            .ReturnsAsync( 0 );
 
         _services = new ServiceCollection();
         _fixture.Inject( _services );
@@ -248,11 +250,70 @@ public class ProposalCheckRunnerTests
         _dbContextMock.Verify( m => m.Chains, Times.Exactly(2) );
         _dbContextMock.Verify( m => m.Proposals, Times.Never );
         _eventBroadcaster.Verify( m => m.BroadcastStatusChangeAsync( It.IsAny<Proposal>(), It.IsAny<string>() ), Times.Once);
-        _eventBroadcaster.Verify( m => m.BroadcastNewUpgradeAsync( It.IsAny<Proposal>(), It.IsAny<string>(), It.IsAny<ProposalInfoUpgradePlan>() ), Times.Once);
+        _eventBroadcaster.Verify( m => m.BroadcastNewUpgradeAsync( It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<ProposalInfoUpgradePlan?>() ), Times.Once);
         chain.Proposals.First().Status.Should().Be( proposalInfo.Proposals.First().Status );
         _dbContextMock.Verify( m => m.SaveChangesAsync( It.IsAny<CancellationToken>() ), Times.Once );
     }
 
+    [Theory]
+    [AutoDomainData]
+    public async Task Run_NewProposalNoContent( Chain chain, BlockInfoResult blockInfoResult, ProposalInfoResponse proposalInfo )
+    {
+        chain.Endpoints = new List<Endpoint>()
+        {
+            new ()
+            {
+                Chain = chain,
+                Url = "http://localhost:1317",
+                Provider = "Test",
+                Type = EndpointType.Rest
+            }
+        };
+        chain.Proposals.Clear();
+        
+        _dbContextMock.Setup( m => m.Chains )
+            .ReturnsDbSet(new List<Chain> { chain });
+        _dbContextMock.Setup( m => m.Proposals )
+            .ReturnsDbSet(new List<Proposal>());
+
+        proposalInfo.Proposals = proposalInfo.Proposals.Take( 1 ).ToList();
+        proposalInfo.Proposals.First().SubmitTime = 
+        proposalInfo.Proposals.First().DepositEndTime = 
+        proposalInfo.Proposals.First().VotingEndTime = 
+        proposalInfo.Proposals.First().VotingStartTIme = DateTime.UtcNow.ToString("u");
+        proposalInfo.Proposals.First().Content = null;
+        
+        blockInfoResult.Block.Header.Height = $"{1000L}";
+        blockInfoResult.Block.Header.Time = DateTime.UtcNow.AddSeconds(-5);
+        _httpMessageHandler.SetupAnyRequestSequence()
+            .ReturnsResponse( JsonConvert.SerializeObject( blockInfoResult ) )
+            .ReturnsResponse( JsonConvert.SerializeObject( proposalInfo ) );
+        _eventBroadcaster.Setup( m => m.BroadcastStatusChangeAsync( It.IsAny<Proposal>(), It.IsAny<string>() ) )
+            .Callback( ( Proposal prop, string status ) =>
+            {
+                prop.Title.Should().Be( "NO TITLE" );
+                prop.Description.Should().Be( "NO DESCRIPTION" );
+                prop.ProposalType.Should().Be( "UNKNOWN" );
+            } );
+            
+        
+        var cts = new CancellationTokenSource();
+        var runTask = _runner.RunAsync( cts.Token );
+        
+        await Task.Delay( 250, CancellationToken.None );
+        cts.Cancel();
+        await Task.Delay( 250, CancellationToken.None );
+
+        runTask.IsCanceled.Should().BeTrue();
+        _dbContextMock.Verify( m => m.Chains, Times.Exactly(2) );
+        _dbContextMock.Verify( m => m.Proposals, Times.Once );
+        _eventBroadcaster.Verify( m => m.BroadcastStatusChangeAsync( It.IsAny<Proposal>(), It.IsAny<string>() ), Times.Once);
+        _eventBroadcaster.Verify( m => m.BroadcastNewUpgradeAsync( It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<ProposalInfoUpgradePlan?>() ), Times.Once);
+        chain.Proposals.Count.Should().Be( 1 );
+        chain.Proposals.First().Status.Should().Be( proposalInfo.Proposals.First().Status );
+        _dbContextMock.Verify( m => m.SaveChangesAsync( It.IsAny<CancellationToken>() ), Times.Exactly(2) );
+    }
+    
     [Theory]
     [AutoDomainData]
     public async Task Run_NewProposal( Chain chain, BlockInfoResult blockInfoResult, ProposalInfoResponse proposalInfo )
@@ -285,7 +346,14 @@ public class ProposalCheckRunnerTests
         _httpMessageHandler.SetupAnyRequestSequence()
             .ReturnsResponse( JsonConvert.SerializeObject( blockInfoResult ) )
             .ReturnsResponse( JsonConvert.SerializeObject( proposalInfo ) );
-
+        _eventBroadcaster.Setup( m => m.BroadcastStatusChangeAsync( It.IsAny<Proposal>(), It.IsAny<string>() ) )
+            .Callback( ( Proposal prop, string status ) =>
+            {
+                prop.Title.Should().Be( proposalInfo.Proposals.First().Content.Title );
+                prop.Description.Should().Be( proposalInfo.Proposals.First().Content.Description );
+                prop.ProposalType.Should().Be( proposalInfo.Proposals.First().Content.Type );
+            } );
+        
         var cts = new CancellationTokenSource();
         var runTask = _runner.RunAsync( cts.Token );
         
@@ -297,9 +365,9 @@ public class ProposalCheckRunnerTests
         _dbContextMock.Verify( m => m.Chains, Times.Exactly(2) );
         _dbContextMock.Verify( m => m.Proposals, Times.Once );
         _eventBroadcaster.Verify( m => m.BroadcastStatusChangeAsync( It.IsAny<Proposal>(), It.IsAny<string>() ), Times.Once);
-        _eventBroadcaster.Verify( m => m.BroadcastNewUpgradeAsync( It.IsAny<Proposal>(), It.IsAny<string>(), It.IsAny<ProposalInfoUpgradePlan>() ), Times.Once);
+        _eventBroadcaster.Verify( m => m.BroadcastNewUpgradeAsync( It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<ProposalInfoUpgradePlan?>() ), Times.Once);
         chain.Proposals.Count.Should().Be( 1 );
         chain.Proposals.First().Status.Should().Be( proposalInfo.Proposals.First().Status );
-        _dbContextMock.Verify( m => m.SaveChangesAsync( It.IsAny<CancellationToken>() ), Times.Once );
+        _dbContextMock.Verify( m => m.SaveChangesAsync( It.IsAny<CancellationToken>() ), Times.Exactly(2) );
     }
 }

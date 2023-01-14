@@ -22,6 +22,7 @@ var host = Host.CreateDefaultBuilder(args)
         var discordSocketConfig = new DiscordSocketConfig()
         {
             LogLevel = LogSeverity.Verbose,
+            UseInteractionSnowflakeDate = false
         };
         services.AddSingleton(discordSocketConfig);
         services.AddSingleton<DiscordSocketClient>();

@@ -17,7 +17,7 @@ namespace CosmosProposalBot.Modules;
 public interface IEventBroadcaster
 {
     Task BroadcastStatusChangeAsync( Proposal prop, string newStatus );
-    Task BroadcastNewUpgradeAsync( Proposal prop, string newStatus, ProposalInfoUpgradePlan plan );
+    Task BroadcastNewUpgradeAsync( Guid prop, string newStatus, ProposalInfoUpgradePlan? plan );
     Task BroadcastUpgradeReminderAsync( TrackedEvent trackedEvent );
 }
 
@@ -169,8 +169,25 @@ public class EventBroadcaster : IEventBroadcaster
         return eb.Build();
     }
 
-    public async Task BroadcastNewUpgradeAsync( Proposal prop, string newStatus, ProposalInfoUpgradePlan plan )
+    public async Task BroadcastNewUpgradeAsync( Guid propId, string newStatus, ProposalInfoUpgradePlan? plan )
     {
+        if( plan == default )
+        {
+            return;
+        }
+        
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var socketClient = scope.ServiceProvider.GetRequiredService<DiscordSocketClient>();
+
+        var prop = await dbContext.Proposals
+            .Include( p => p.Chain )
+            .FirstOrDefaultAsync( p => p.Id == propId );
+        
+        if( prop == default )
+        {
+            return;
+        }
         if( prop.ProposalType != Constants.ProposalTypeSoftwareUpgrade )
         {
             return;
@@ -185,15 +202,8 @@ public class EventBroadcaster : IEventBroadcaster
         {
             return;
         }
-        // TODO: handle rejected upgrades
         
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-        var socketClient = scope.ServiceProvider.GetRequiredService<DiscordSocketClient>();
-
-        var localProp = await dbContext.Proposals
-            .Include( p => p.Chain )
-            .FirstOrDefaultAsync( p => p.Id == prop.Id );
+        // TODO: handle rejected upgrades
         var channelSubscriptions = await dbContext.ChannelSubscriptions
             .Include( s => s.Chain )
             .Where( s => s.Chain.Id == prop.Chain.Id )
@@ -201,11 +211,12 @@ public class EventBroadcaster : IEventBroadcaster
 
         var trackedEvent = new TrackedEvent
         {
-            Proposal = localProp,
+            Proposal = prop,
             Height = ulong.Parse( plan.Height )
         };
 
         await dbContext.TrackedEvents.AddAsync( trackedEvent );
+        await dbContext.SaveChangesAsync();
         
         foreach( var sub in channelSubscriptions )
         {
@@ -227,7 +238,7 @@ public class EventBroadcaster : IEventBroadcaster
                 
                 _logger.LogInformation("{ServiceName} broadcasting upgrade info to {GuildName} : {ChannelName}", nameof(EventBroadcaster), guild.Name, channel.Name);
 
-                var threadChannel = await channel.CreateThreadAsync( $"Upgrade {localProp.Chain.Name}: {plan.Name}" );
+                var threadChannel = await channel.CreateThreadAsync( $"Upgrade {prop.Chain.Name}: {plan.Name}" );
                 var eventThread = new TrackedEventThread
                 {
                     ThreadId = threadChannel.Id,
@@ -237,14 +248,13 @@ public class EventBroadcaster : IEventBroadcaster
                 await dbContext.AddAsync( eventThread );
                 trackedEvent.Threads.Add(eventThread);
 
-                await threadChannel.SendMessageAsync("New upgrade incoming!", embed: await GenerateUpgradeEmbed( localProp, plan ));
+                await threadChannel.SendMessageAsync("New upgrade incoming!", embed: await GenerateUpgradeEmbed( prop, plan ));
             }
             catch( Exception e )
             {
                 _logger.LogError($"Failed to send channel message: {e}");
             }
         }
-        await dbContext.SaveChangesAsync();
     }
 
     private async Task<Embed> GenerateUpgradeEmbed( Proposal prop, ProposalInfoUpgradePlan plan )
