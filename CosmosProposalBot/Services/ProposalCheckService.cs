@@ -28,6 +28,10 @@ public class ProposalCheckService : IHostedService
         {
             await Task.Delay( 1000 * 60, cancellationToken );
         }
+        else
+        {
+            // await Task.Delay( 1000 * 30, cancellationToken );
+        }
         _logger.LogInformation($"Starting ${nameof(ProposalCheckService)}");
         
 #pragma warning disable CS4014

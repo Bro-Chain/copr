@@ -28,6 +28,11 @@ public class UpgradeTrackingService : IHostedService
         {
             await Task.Delay( 1000 * 60, cancellationToken );
         }
+        else
+        {
+            // await Task.Delay( 1000 * 30, cancellationToken );
+        }
+
         _logger.LogInformation($"Starting ${nameof(UpgradeTrackingService)}");
         await Task.Delay( 1000*10, cancellationToken );
 #pragma warning disable CS4014

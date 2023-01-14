@@ -40,6 +40,8 @@ public class DiscordBotService : IHostedService
     {
         try
         {
+            _logger.LogInformation($"Starting ${nameof(DiscordBotService)}");
+            
             _discordClient.Log += OnDiscordClientLog;
             _discordClient.Ready += OnDiscordClientReady;
             _interactionService.Log += OnDiscordClientLog;

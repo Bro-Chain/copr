@@ -77,7 +77,10 @@ public class EventBroadcasterTest
         Proposal proposal,
         ProposalInfoUpgradePlan plan)
     {
-        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, Constants.ProposalStatusPassed, plan );
+        _dbContextMock.Setup( m => m.Proposals )
+            .ReturnsDbSet( new List<Proposal>{proposal});
+        
+        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal.Id, Constants.ProposalStatusPassed, plan );
      
         _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Never );
         _socketClientMock.Verify( m => m.GetUser( It.IsAny<ulong>() ), Times.Never );
@@ -91,8 +94,10 @@ public class EventBroadcasterTest
         ProposalInfoUpgradePlan plan)
     {
         proposal.ProposalType = Constants.ProposalTypeSoftwareUpgrade;
+        _dbContextMock.Setup( m => m.Proposals )
+            .ReturnsDbSet( new List<Proposal>{proposal});
         
-        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, Constants.ProposalStatusDepositPeriod, plan );
+        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal.Id, Constants.ProposalStatusDepositPeriod, plan );
      
         _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Never );
         _socketClientMock.Verify( m => m.GetUser( It.IsAny<ulong>() ), Times.Never );
@@ -119,9 +124,9 @@ public class EventBroadcasterTest
         _dbContextMock.Setup( m => m.TrackedEvents )
             .ReturnsDbSet(new List<TrackedEvent>());
         
-        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, newStatus, new ProposalInfoUpgradePlan(){ Height = $"{1000}"} );
+        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal.Id, newStatus, new ProposalInfoUpgradePlan(){ Height = $"{1000}"} );
      
-        _dbContextMock.Verify( m => m.Proposals, shouldSkip ? Times.Never : Times.Once );
+        _dbContextMock.Verify( m => m.Proposals, Times.Once );
         _dbContextMock.Verify( m => m.ChannelSubscriptions, shouldSkip ? Times.Never : Times.Once );
     }
 
@@ -140,7 +145,7 @@ public class EventBroadcasterTest
         _dbContextMock.Setup( m => m.TrackedEvents )
             .ReturnsDbSet(new List<TrackedEvent>());
         
-        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, Constants.ProposalStatusPassed, plan );
+        await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal.Id, Constants.ProposalStatusPassed, plan );
      
         _dbContextMock.Verify( m => m.Proposals, Times.Once );
         _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Once );
@@ -186,7 +191,7 @@ public class EventBroadcasterTest
     //     _socketClientMock.Setup( m => m.GetGuild( It.IsAny<ulong>() ) )
     //         .Returns( socketGuild as SocketGuild );
     //     
-    //     await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal, "PROPOSAL_STATUS_PASSED", plan );
+    //     await _eventBroadcaster.BroadcastNewUpgradeAsync( proposal.Id, "PROPOSAL_STATUS_PASSED", plan );
     //  
     //     _dbContextMock.Verify( m => m.ChannelSubscriptions, Times.Once );
     //     _dbContextMock.Verify( m => m.AddAsync( It.IsAny<TrackedEvent>(), default ), Times.Once );

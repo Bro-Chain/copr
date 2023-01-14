@@ -70,7 +70,7 @@ public class ProposalCheckRunner : IProposalCheckRunner
         var httpClientFactory = outerScope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
 
         var chains = outerDbContext.Chains
-            // .Where( c => c.Name == "crescent" )
+            // .Where( c => c.Name == "" )
             .Where(c => _botOptions.Value.SupportedChains.Contains( c.Name ) || c.CustomForGuildId != null )
             .ToList();
         
@@ -165,7 +165,7 @@ public class ProposalCheckRunner : IProposalCheckRunner
                             existingProposal.VotingEndTime =
                                 DateTime.Parse( prop.VotingEndTime, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal ).ToUniversalTime();
                             
-                            await eventBroadcaster.BroadcastNewUpgradeAsync( existingProposal, prop.Status, prop.Content.Plan );
+                            await eventBroadcaster.BroadcastNewUpgradeAsync( existingProposal.Id, prop.Status, prop.Content.Plan );
                         }
                     }
                     else
@@ -174,10 +174,10 @@ public class ProposalCheckRunner : IProposalCheckRunner
                         var newProp = new Proposal
                         {
                             Chain = chain,
-                            Title = prop.Content.Title,
-                            Description = prop.Content.Description,
+                            Title = prop.Content?.Title ?? "NO TITLE",
+                            Description = prop.Content?.Description ?? "NO DESCRIPTION",
                             ProposalId = prop.Id,
-                            ProposalType = prop.Content.Type,
+                            ProposalType = prop.Content?.Type ?? "UNKNOWN",
                             SubmitTime = DateTime.Parse( prop.SubmitTime, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal ).ToUniversalTime(),
                             DepositEndTime = DateTime.Parse( prop.DepositEndTime, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal ).ToUniversalTime(),
                             VotingStartTime = DateTime.Parse( prop.VotingStartTIme, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal ).ToUniversalTime(),
@@ -188,8 +188,9 @@ public class ProposalCheckRunner : IProposalCheckRunner
 
                         chain.Proposals.Add( newProp );
                         innerDbContext.Proposals.Add( newProp );
+                        await innerDbContext.SaveChangesAsync( token );
                         
-                        await eventBroadcaster.BroadcastNewUpgradeAsync( newProp, prop.Status, prop.Content.Plan );
+                        await eventBroadcaster.BroadcastNewUpgradeAsync( newProp.Id, prop.Status, prop.Content?.Plan );
                     }
                 }
 
