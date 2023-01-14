@@ -247,6 +247,7 @@ public class EventBroadcaster : IEventBroadcaster
                 };
                 await dbContext.AddAsync( eventThread );
                 trackedEvent.Threads.Add(eventThread);
+                await dbContext.SaveChangesAsync();
 
                 await threadChannel.SendMessageAsync("New upgrade incoming!", embed: await GenerateUpgradeEmbed( prop, plan ));
             }
