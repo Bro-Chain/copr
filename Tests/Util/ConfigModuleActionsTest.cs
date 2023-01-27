@@ -30,12 +30,21 @@ public class ConfigModuleActionsTest
     
     private readonly ulong _adminRoleId = 10203L;
     private readonly ulong _guildId = 10203L;
+    private readonly Mock<IRole> _guildRole;
 
     public ConfigModuleActionsTest( )
     {
+        _guildRole = _fixture.Freeze<Mock<IRole>>();
+        _guildRole.Setup( r => r.Id )
+            .Returns( _adminRoleId );
+        _guildRole.Setup( r => r.Name )
+            .Returns( "SuperAdmin" );
+        
         _guildMock = _fixture.Freeze<Mock<IGuild>>();
         _guildMock.Setup( m => m.Id )
             .Returns( _guildId );
+        _guildMock.Setup( m => m.Roles )
+            .Returns( new List<IRole> { _guildRole.Object } );
         
         _interactionMock = _fixture.Freeze<Mock<IDiscordInteraction>>();
         _interactionContextMock = _fixture.Freeze<Mock<IInteractionContext>>();
@@ -297,6 +306,7 @@ public class ConfigModuleActionsTest
         
         _dbContextMock.Verify( m => m.Guilds, Times.Once );
         _interactionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Never );
 
         _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Never );
     }
@@ -343,6 +353,7 @@ public class ConfigModuleActionsTest
         
         _dbContextMock.Verify( m => m.Guilds, Times.Once );
         _interactionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Never );
 
         _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Once );
     }
@@ -359,6 +370,97 @@ public class ConfigModuleActionsTest
         _permissionHelperMock.Verify( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object), Times.Once);
         
         _dbContextMock.Verify( m => m.Guilds, Times.Never );
+    }
+    
+    [Fact]
+    public async Task ListRoles_MissingGuild()
+    {
+        _dbContextMock.Setup( m => m.Guilds )
+            .ReturnsDbSet( new List<Guild>() );
+        
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().Contain( "No roles" );
+                text.Should().NotContain( "The following" );
+            } );
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        await _configModuleActions.ListRolesAsync( _interactionContextMock.Object );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
+        _dbContextMock.Verify( m => m.Guilds, Times.Once );
+        _interactionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Never );
+    }
+    
+    [Fact]
+    public async Task ListRoles_ExistingGuildMissingAdminRoles()
+    {
+        var guilds = new List<Guild>()
+        {
+            new()
+            {
+                GuildId = _guildId,
+            }
+        };
+        _dbContextMock.Setup( m => m.Guilds )
+            .ReturnsDbSet( guilds );
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().Contain( "No roles" );
+                text.Should().NotContain( "The following" );
+            } );
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        await _configModuleActions.ListRolesAsync( _interactionContextMock.Object );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
+        _dbContextMock.Verify( m => m.Guilds, Times.Once );
+        _interactionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Never );
+    }
+    
+    [Fact]
+    public async Task ListRoles_Success()
+    {
+        var guilds = new List<Guild>()
+        {
+            new()
+            {
+                GuildId = _guildId,
+                AdminRoles = new()
+                {
+                    new()
+                    {
+                        RoleId = _adminRoleId
+                    }
+                }
+            }
+        };
+        _dbContextMock.Setup( m => m.Guilds )
+            .ReturnsDbSet( guilds );
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().NotContain( "No roles" );
+                text.Should().Contain( "The following" );
+            } );
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        await _configModuleActions.ListRolesAsync( _interactionContextMock.Object );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
+        _dbContextMock.Verify( m => m.Guilds, Times.Once );
+        _interactionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Never );
     }
     
     [Fact]

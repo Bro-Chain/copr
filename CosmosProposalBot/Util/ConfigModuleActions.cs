@@ -170,7 +170,7 @@ public class ConfigModuleActions : IConfigModuleActions
                 return;
             }
 
-            await context.Interaction.FollowupAsync( $"The following roles can admin me: {roleNames.Aggregate( ( f, s ) => $"{f}, {s}" )}" );
+            await context.Interaction.FollowupAsync( $"The following roles can admin me: {roleNames.Aggregate( ( f, s ) => $"{f}, {s}" )}", ephemeral: true  );
         }
         catch( Exception e )
         {
