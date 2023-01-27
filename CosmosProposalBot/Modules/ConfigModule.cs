@@ -45,6 +45,7 @@ public class ConfigModule : InteractionModuleBase
             }
 
             var guild = await dbContext.Guilds
+                .AsSplitQuery()
                 .Include( g => g.AdminRoles )
                 .SingleOrDefaultAsync( g => g.GuildId == Context.Guild.Id );
             if( guild == default )
@@ -65,18 +66,18 @@ public class ConfigModule : InteractionModuleBase
                 };    
                 guild.AdminRoles.Add( newRole );
                 await dbContext.SaveChangesAsync();
-                await FollowupAsync( $"Role @{role.Name} was **added** as admin group" );
+                await FollowupAsync( $"Role @{role.Name} was **added** as admin group", ephemeral: true );
             }
             else
             {
                 await dbContext.SaveChangesAsync();
-                await FollowupAsync( $"Role @{role.Name} is **already** and admin group" );
+                await FollowupAsync( $"Role @{role.Name} is **already** an admin group", ephemeral: true );
             }
         }
         catch( Exception e )
         {
             _logger.LogError($"{e.Message}");
-            await FollowupAsync( $"Something went wrong. Please contact the my developers and let them know what happened." );
+            await RespondAsync( $"Something went wrong. Please contact the my developers and let them know what happened.", ephemeral: true );
         }
     }
 
@@ -102,25 +103,26 @@ public class ConfigModule : InteractionModuleBase
                 .SingleOrDefaultAsync( g => g.GuildId == role.Guild.Id );
             if( guild == default )
             {
-                await FollowupAsync( $"Role @{role.Name} **is not** an admin group" );
+                await FollowupAsync( $"Role @{role.Name} **is not** an admin group", ephemeral: true );
                 return;
             }
 
             var existingRole = guild.AdminRoles.FirstOrDefault( r => r.RoleId == role.Id );
             if( existingRole == default )
             {
-                await FollowupAsync( $"Role @{role.Name} **is not** an admin group" );
+                await FollowupAsync( $"Role @{role.Name} **is not** an admin group", ephemeral: true );
                 return;
             }
 
             guild.AdminRoles.RemoveAll( r => r.RoleId == role.Id );
-            await FollowupAsync( $"Role @{role.Name} was **revoked** as admin group" );
+            await FollowupAsync( $"Role @{role.Name} was **revoked** as admin group", ephemeral: true );
             
             await dbContext.SaveChangesAsync();
         }
         catch( Exception e )
         {
             _logger.LogError($"{e.Message}");
+            await RespondAsync( $"Something went wrong. Please contact the my developers and let them know what happened.", ephemeral: true );
         }
     }
 
@@ -147,7 +149,7 @@ public class ConfigModule : InteractionModuleBase
                 .SingleOrDefaultAsync( g => g.GuildId == Context.Guild.Id );
             if( guild == default )
             {
-                await FollowupAsync( $"No roles have been configured, effectively allowing **anyone** to admin me! Make sure to assign at least one admin role as soon as possible!" );
+                await FollowupAsync( $"No roles have been configured, effectively allowing **anyone** to admin me! Make sure to assign at least one admin role as soon as possible!", ephemeral: true );
                 return;
             }
 
@@ -158,7 +160,7 @@ public class ConfigModule : InteractionModuleBase
                 .ToList();
             if( !roleNames.Any() )
             {
-                await FollowupAsync( $"No roles have been configured, effectively allowing **anyone** to admin me! Make sure to assign at least one admin role as soon as possible!" ); 
+                await FollowupAsync( $"No roles have been configured, effectively allowing **anyone** to admin me! Make sure to assign at least one admin role as soon as possible!", ephemeral: true ); 
                 return;
             }
 
@@ -167,6 +169,7 @@ public class ConfigModule : InteractionModuleBase
         catch( Exception e )
         {
             _logger.LogError($"{e.Message}");
+            await RespondAsync( $"Something went wrong. Please contact the my developers and let them know what happened.", ephemeral: true );
         }
     }
 
