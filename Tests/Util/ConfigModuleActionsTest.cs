@@ -71,6 +71,8 @@ public class ConfigModuleActionsTest
         };
         
         _dbContextMock = _fixture.Freeze<Mock<CopsDbContext>>();
+        _dbContextMock.Setup( m => m.Remove( It.IsAny<Chain?>() ) )
+            .Returns<Chain>( ( entity ) => default );
         _dbContextMock.Setup( m => m.SaveChangesAsync( default ) )
             .ReturnsAsync( 0 );
         _dbContextMock.Setup( m => m.SaveChangesAsync( It.IsAny<CancellationToken>() ) )
@@ -628,6 +630,19 @@ public class ConfigModuleActionsTest
     }
     
     [Fact]
+    public async Task AddCustomChain_ModalCreated()
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        await _configModuleActions.AddCustomChainAsync( _interactionContextMock.Object );
+
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null,null ), Times.Never );
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Never );
+        _interactionMock.Verify( m => m.RespondWithModalAsync( It.IsAny<Modal>(), null ), Times.Once );
+    }
+    
+    [Fact]
     public async Task RemoveCustomChain_PermissionDenied()
     {
         _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
@@ -639,5 +654,113 @@ public class ConfigModuleActionsTest
         _permissionHelperMock.Verify( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object), Times.Once);
         
         _dbContextMock.Verify( m => m.Chains, Times.Never );
+    }
+    
+    [Theory]
+    [AutoDomainData]
+    public async Task RemoveCustomChain_ChainMissing( string chainName )
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().Contain( $"No custom chain by name '{chainName}'" );
+                text.Should().NotContain( "Successfully removed tracking" );
+            } );
+
+        _dbContextMock.Setup( m => m.Chains )
+            .ReturnsDbSet( new List<Chain>() );
+        
+        await _configModuleActions.RemoveCustomChainAsync( _interactionContextMock.Object, chainName );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Never );
+        
+        _dbContextMock.Verify( m => m.Chains, Times.Once );
+        _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Never );
+    }
+    
+    [Theory]
+    [AutoDomainData]
+    public async Task RemoveCustomChain_ExistingChainWrongGuild( string chainName, ulong chainGuildId, ulong userGuildId )
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().Contain( $"No custom chain by name '{chainName}'" );
+                text.Should().NotContain( "Successfully removed tracking" );
+            } );
+
+        var guildMock = new Mock<IGuild>();
+        guildMock.Setup( g => g.Id )
+            .Returns( userGuildId );
+
+        _interactionContextMock.Setup( m => m.Guild )
+            .Returns( guildMock.Object );
+
+        var chains = new List<Chain>()
+        {
+            new ()
+            {
+                Name = chainName,
+                CustomForGuildId = chainGuildId
+            }
+        };
+        _dbContextMock.Setup( m => m.Chains )
+            .ReturnsDbSet( chains );
+        
+        await _configModuleActions.RemoveCustomChainAsync( _interactionContextMock.Object, chainName );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Never );
+        
+        _dbContextMock.Verify( m => m.Chains, Times.Once );
+        _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Never );
+    }
+    
+    [Theory]
+    [AutoDomainData]
+    public async Task RemoveCustomChain_ExistingChainCorrectGuild( string chainName, ulong chainGuildId )
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().NotContain( $"No custom chain by name '{chainName}'" );
+                text.Should().Contain( "Successfully removed tracking" );
+            } );
+
+        var guildMock = new Mock<IGuild>();
+        guildMock.Setup( g => g.Id )
+            .Returns( chainGuildId );
+
+        _interactionContextMock.Setup( m => m.Guild )
+            .Returns( guildMock.Object );
+
+        var chains = new List<Chain>()
+        {
+            new ()
+            {
+                Name = chainName,
+                CustomForGuildId = chainGuildId
+            }
+        };
+        _dbContextMock.Setup( m => m.Chains )
+            .ReturnsDbSet( chains );
+        
+        await _configModuleActions.RemoveCustomChainAsync( _interactionContextMock.Object, chainName );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Never );
+        
+        _dbContextMock.Verify( m => m.Chains, Times.Once );
+        _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Once );
     }
 }
