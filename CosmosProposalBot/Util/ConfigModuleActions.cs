@@ -24,15 +24,12 @@ public interface IConfigModuleActions
 public class ConfigModuleActions : IConfigModuleActions
 {
     private readonly ILogger<ConfigModuleActions> _logger;
-    private readonly IOptions<BotOptions> _options;
     private readonly IServiceProvider _serviceProvider;
 
     public ConfigModuleActions( ILogger<ConfigModuleActions> logger,
-        IOptions<BotOptions> options,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
-        _options = options;
         _serviceProvider = serviceProvider;
     }
 
