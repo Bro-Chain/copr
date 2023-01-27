@@ -28,42 +28,42 @@ public class ConfigModule : InteractionModuleBase
     public async Task AllowRole( IRole role )
         => await _serviceProvider.CreateScope().ServiceProvider
             .GetRequiredService<IConfigModuleActions>()
-            .AllowRole( Context, role );
+            .AllowRoleAsync( Context, role );
 
     [SlashCommand( "revoke-admin-role", "Allows members of a given role to admin this bot" )]
     public async Task RevokeRole( IRole role )
         => await _serviceProvider.CreateScope().ServiceProvider
             .GetRequiredService<IConfigModuleActions>()
-            .RevokeRole( Context, role );
+            .RevokeRoleAsync( Context, role );
 
 
     [SlashCommand( "list-admins", "List all admins (roles and users) for this bot" )]
     public async Task ListRoles()
         => await _serviceProvider.CreateScope().ServiceProvider
             .GetRequiredService<IConfigModuleActions>()
-            .ListRoles( Context );
+            .ListRolesAsync( Context );
 
     [SlashCommand( "add-endpoint", "Add a REST endpoint for a chain" )]
     public async Task AddEndpoint()
         => await _serviceProvider.CreateScope().ServiceProvider
             .GetRequiredService<IConfigModuleActions>()
-            .AddEndpoint( Context );
+            .AddEndpointAsync( Context );
 
     [SlashCommand( "remove-endpoint", "Remove a REST endpoint for a chain" )]
     public async Task RemoveEndpoint( string chainName, string providerName )
         => await _serviceProvider.CreateScope().ServiceProvider
             .GetRequiredService<IConfigModuleActions>()
-            .RemoveEndpoint( Context, chainName, providerName );
+            .RemoveEndpointAsync( Context, chainName, providerName );
 
     [SlashCommand( "add-custom-chain", "Start tracking a custom chain (such as a testnet)" )]
     public async Task AddCustomChain()
         => await _serviceProvider.CreateScope().ServiceProvider
             .GetRequiredService<IConfigModuleActions>()
-            .AddCustomChain( Context );
+            .AddCustomChainAsync( Context );
 
     [SlashCommand( "remove-custom-chain", "Remove tracking of a custom chain (such as a testnet)" )]
     public async Task RemoveCustomChain( string chainName )
         => await _serviceProvider.CreateScope().ServiceProvider
             .GetRequiredService<IConfigModuleActions>()
-            .RemoveCustomChain( Context, chainName );
+            .RemoveCustomChainAsync( Context, chainName );
 }

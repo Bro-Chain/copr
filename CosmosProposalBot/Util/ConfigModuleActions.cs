@@ -12,13 +12,13 @@ namespace CosmosProposalBot.Util;
 
 public interface IConfigModuleActions
 {
-    Task AllowRole( IInteractionContext context, IRole role );
-    Task RevokeRole( IInteractionContext context, IRole role );
-    Task ListRoles( IInteractionContext context);
-    Task AddEndpoint( IInteractionContext context);
-    Task RemoveEndpoint( IInteractionContext context, string chainName, string providerName );
-    Task AddCustomChain( IInteractionContext context);
-    Task RemoveCustomChain( IInteractionContext context, string chainName );
+    Task AllowRoleAsync( IInteractionContext context, IRole role );
+    Task RevokeRoleAsync( IInteractionContext context, IRole role );
+    Task ListRolesAsync( IInteractionContext context);
+    Task AddEndpointAsync( IInteractionContext context);
+    Task RemoveEndpointAsync( IInteractionContext context, string chainName, string providerName );
+    Task AddCustomChainAsync( IInteractionContext context);
+    Task RemoveCustomChainAsync( IInteractionContext context, string chainName );
 }
 
 public class ConfigModuleActions : IConfigModuleActions
@@ -36,7 +36,7 @@ public class ConfigModuleActions : IConfigModuleActions
         _serviceProvider = serviceProvider;
     }
 
-    public async Task AllowRole( IInteractionContext context, IRole role )
+    public async Task AllowRoleAsync( IInteractionContext context, IRole role )
     {
         try
         {
@@ -89,11 +89,11 @@ public class ConfigModuleActions : IConfigModuleActions
         }
     }
 
-    public async Task RevokeRole( IInteractionContext context, IRole role )
+    public async Task RevokeRoleAsync( IInteractionContext context, IRole role )
     {
         try
         {
-            await context.Interaction. DeferAsync( ephemeral: true );
+            await context.Interaction.DeferAsync( ephemeral: true );
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
@@ -133,11 +133,11 @@ public class ConfigModuleActions : IConfigModuleActions
         }
     }
 
-    public async Task ListRoles( IInteractionContext context)
+    public async Task ListRolesAsync( IInteractionContext context)
     {
         try
         {
-            await context.Interaction. DeferAsync( ephemeral: true );
+            await context.Interaction.DeferAsync( ephemeral: true );
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
@@ -179,7 +179,7 @@ public class ConfigModuleActions : IConfigModuleActions
         }
     }
 
-    public async Task AddEndpoint( IInteractionContext context)
+    public async Task AddEndpointAsync( IInteractionContext context)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
@@ -200,12 +200,19 @@ public class ConfigModuleActions : IConfigModuleActions
         await context.Interaction.RespondWithModalAsync( mb.Build() );
     }
 
-    public async Task RemoveEndpoint( IInteractionContext context, string chainName, string providerName )
+    public async Task RemoveEndpointAsync( IInteractionContext context, string chainName, string providerName )
     {
         await context.Interaction.RespondAsync( "Verifying...", ephemeral: true );
 
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
+
+        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
+        {
+            await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
+            return;
+        }
         
         var chain = await dbContext.Chains
             .Include( c => c.Endpoints )
@@ -231,7 +238,7 @@ public class ConfigModuleActions : IConfigModuleActions
         await context.Interaction.FollowupAsync( $"Endpoint for provider {providerName} on {chainName} removed!", ephemeral: false);
     }
 
-    public async Task AddCustomChain( IInteractionContext context)
+    public async Task AddCustomChainAsync( IInteractionContext context)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
@@ -254,9 +261,9 @@ public class ConfigModuleActions : IConfigModuleActions
         await context.Interaction.RespondWithModalAsync( mb.Build() );
     }
 
-    public async Task RemoveCustomChain( IInteractionContext context, string chainName )
+    public async Task RemoveCustomChainAsync( IInteractionContext context, string chainName )
     {
-        await context.Interaction. DeferAsync();
+        await context.Interaction.DeferAsync();
         
         await using var scope = _serviceProvider.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
