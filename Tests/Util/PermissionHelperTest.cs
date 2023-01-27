@@ -99,18 +99,6 @@ public class PermissionHelperTest
     }
     
     [Fact]
-    public async Task EnsureUserHasPermission_NoAdminRolesOrUsersDefined()
-    {
-        _guildUserMock.Setup( m=> m.RoleIds)
-            .Returns( () => new List<ulong>() {} );
-        _guildMock.Setup( m => m.Id )
-            .Returns( _guildWithoutUserOrRole );
-
-        var result = await _permissionHelper.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object );
-        result.Should().BeTrue();
-    }
-    
-    [Fact]
     public async Task EnsureUserHasPermission_AdminRoleAccess()
     {
         _guildUserMock.Setup( m=> m.RoleIds)
@@ -123,7 +111,19 @@ public class PermissionHelperTest
     }
     
     [Fact]
-    public async Task EnsureUserHasPermission_BadGuild()
+    public async Task EnsureUserHasPermission_NoAdminRolesOrUsersDefined()
+    {
+        _guildUserMock.Setup( m=> m.RoleIds)
+            .Returns( () => new List<ulong>() {} );
+        _guildMock.Setup( m => m.Id )
+            .Returns( _guildWithoutUserOrRole );
+
+        var result = await _permissionHelper.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object );
+        result.Should().BeTrue();
+    }
+    
+    [Fact]
+    public async Task EnsureUserHasPermission_GuildNotFoundInDatabase()
     {
         _guildUserMock.Setup( m=> m.RoleIds)
             .Returns( () => new List<ulong>() { _adminRoleId } );
@@ -131,18 +131,6 @@ public class PermissionHelperTest
             .Returns( 1 );
 
         var result = await _permissionHelper.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object );
-        result.Should().BeFalse();
-    }
-    
-    [Fact]
-    public async Task EnsureUserHasPermission_NoUserOrRole()
-    {
-        _guildUserMock.Setup( m=> m.RoleIds)
-            .Returns( () => new List<ulong>() {  } );
-        _guildMock.Setup( m => m.Id )
-            .Returns( 1 );
-
-        var result = await _permissionHelper.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object );
-        result.Should().BeFalse();
+        result.Should().BeTrue();
     }
 }

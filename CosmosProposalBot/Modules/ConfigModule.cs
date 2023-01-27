@@ -147,8 +147,7 @@ public class ConfigModule : InteractionModuleBase
                 .SingleOrDefaultAsync( g => g.GuildId == Context.Guild.Id );
             if( guild == default )
             {
-                await FollowupAsync(
-                    $"No roles have been configured, effectively allowing **anyone** to admin me! Make sure to assign at least one admin role as soon as possible!" );
+                await FollowupAsync( $"No roles have been configured, effectively allowing **anyone** to admin me! Make sure to assign at least one admin role as soon as possible!" );
                 return;
             }
 
@@ -159,8 +158,7 @@ public class ConfigModule : InteractionModuleBase
                 .ToList();
             if( !roleNames.Any() )
             {
-                await FollowupAsync(
-                    $"No roles have been configured, effectively allowing **anyone** to admin me! Make sure to assign at least one admin role as soon as possible!" );
+                await FollowupAsync( $"No roles have been configured, effectively allowing **anyone** to admin me! Make sure to assign at least one admin role as soon as possible!" ); 
                 return;
             }
 
@@ -168,8 +166,7 @@ public class ConfigModule : InteractionModuleBase
         }
         catch( Exception e )
         {
-            Console.WriteLine( e );
-            throw;
+            _logger.LogError($"{e.Message}");
         }
     }
 
