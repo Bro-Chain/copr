@@ -35,12 +35,12 @@ public class PermissionHelper : IPermissionHelper
         return false;
     }
 
-    private bool AnyAdminRolesOrUsersDefined( Guild guild ) 
+    private static bool AnyAdminRolesOrUsersDefined( Guild guild ) 
         => guild.AdminRoles.Any() || guild.AdminUsers.Any();
 
-    private bool UserHasAdminRole( Guild guild, IReadOnlyCollection<ulong> userRoleIds )
+    private static bool UserHasAdminRole( Guild guild, IReadOnlyCollection<ulong> userRoleIds )
         => guild.AdminRoles.Any( r => userRoleIds.Contains( r.RoleId ) );
 
-    private bool UserIsAssignedAdmin( Guild guild, ulong userId )
+    private static bool UserIsAssignedAdmin( Guild guild, ulong userId )
         => guild.AdminUsers.Any( u => u.UserId == userId );
 }

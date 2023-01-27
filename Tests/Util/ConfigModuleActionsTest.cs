@@ -91,13 +91,14 @@ public class ConfigModuleActionsTest
         _configModuleActions = _fixture.Create<ConfigModuleActions>();
     }
     
-    [Fact]
-    public async Task AllowRole_PermissionDenied()
+    [Theory]
+    [AutoDomainData]
+    public async Task AllowRole_PermissionDenied( IRole role )
     {
         _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
             .ReturnsAsync( false );
         
-        await _configModuleActions.AllowRoleAsync( _interactionContextMock.Object, default(IRole) );
+        await _configModuleActions.AllowRoleAsync( _interactionContextMock.Object, role );
 
         _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
         _permissionHelperMock.Verify( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object), Times.Once);
@@ -226,19 +227,22 @@ public class ConfigModuleActionsTest
         _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Never );
     }
     
-    [Fact]
-    public async Task RevokeRole_PermissionDenied()
+    
+    [Theory]
+    [AutoDomainData]
+    public async Task RevokeRole_PermissionDenied(IRole role)
     {
         _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
             .ReturnsAsync( false );
         
-        await _configModuleActions.RevokeRoleAsync( _interactionContextMock.Object, default(IRole) );
+        await _configModuleActions.RevokeRoleAsync( _interactionContextMock.Object, role );
 
         _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
         _permissionHelperMock.Verify( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object), Times.Once);
         
         _dbContextMock.Verify( m => m.Guilds, Times.Never );
     }
+    
     
     [Fact]
     public async Task RevokeRole_NullRole_ShouldThrow()

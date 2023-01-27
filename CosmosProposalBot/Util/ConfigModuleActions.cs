@@ -36,6 +36,20 @@ public class ConfigModuleActions : IConfigModuleActions
         _serviceProvider = serviceProvider;
     }
 
+    private async Task<CopsDbContext?> InitAction( AsyncServiceScope scope, IInteractionContext context )
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
+        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
+
+        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
+        {
+            await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
+            return default;
+        }
+
+        return dbContext;
+    }
+    
     public async Task AllowRoleAsync( IInteractionContext context, IRole role )
     {
         try
@@ -43,14 +57,8 @@ public class ConfigModuleActions : IConfigModuleActions
             await context.Interaction.DeferAsync( ephemeral: true );
 
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
-
-            if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
-            {
-                await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
-                return;
-            }
+            var dbContext = await InitAction(scope, context);
+            if( dbContext == null ) return;
 
             var guild = await dbContext.Guilds
                 .AsSplitQuery()
@@ -84,7 +92,7 @@ public class ConfigModuleActions : IConfigModuleActions
         }
         catch( Exception e )
         {
-            _logger.LogError($"{e.Message}");
+            _logger.LogError(e.Message);
             await context.Interaction.RespondAsync( $"Something went wrong. Please contact the my developers and let them know what happened.", ephemeral: true );
         }
     }
@@ -96,14 +104,8 @@ public class ConfigModuleActions : IConfigModuleActions
             await context.Interaction.DeferAsync( ephemeral: true );
 
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
-
-            if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
-            {
-                await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
-                return;
-            }
+            var dbContext = await InitAction(scope, context);
+            if( dbContext == null ) return;
 
             var guild = await dbContext.Guilds
                 .Include( g => g.AdminRoles )
@@ -128,7 +130,7 @@ public class ConfigModuleActions : IConfigModuleActions
         }
         catch( Exception e )
         {
-            _logger.LogError($"{e.Message}");
+            _logger.LogError(e.Message);
             await context.Interaction.RespondAsync( $"Something went wrong. Please contact the my developers and let them know what happened.", ephemeral: true );
         }
     }
@@ -140,14 +142,8 @@ public class ConfigModuleActions : IConfigModuleActions
             await context.Interaction.DeferAsync( ephemeral: true );
 
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-            var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
-
-            if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
-            {
-                await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
-                return;
-            }
+            var dbContext = await InitAction(scope, context);
+            if( dbContext == null ) return;
 
             var guild = await dbContext.Guilds
                 .Include( g => g.AdminRoles )
@@ -174,7 +170,7 @@ public class ConfigModuleActions : IConfigModuleActions
         }
         catch( Exception e )
         {
-            _logger.LogError($"{e.Message}");
+            _logger.LogError(e.Message);
             await context.Interaction.RespondAsync( $"Something went wrong. Please contact the my developers and let them know what happened.", ephemeral: true );
         }
     }
@@ -182,14 +178,8 @@ public class ConfigModuleActions : IConfigModuleActions
     public async Task AddEndpointAsync( IInteractionContext context)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
-
-        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
-        {
-            await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
-            return;
-        }
+        var dbContext = await InitAction(scope, context);
+        if( dbContext == null ) return;
         
         var mb = new ModalBuilder()
             .WithTitle( "Add custom REST endpoint" )
@@ -203,16 +193,10 @@ public class ConfigModuleActions : IConfigModuleActions
     public async Task RemoveEndpointAsync( IInteractionContext context, string chainName, string providerName )
     {
         await context.Interaction.RespondAsync( "Verifying...", ephemeral: true );
-
+        
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
-
-        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
-        {
-            await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
-            return;
-        }
+        var dbContext = await InitAction(scope, context);
+        if( dbContext == null ) return;
         
         var chain = await dbContext.Chains
             .Include( c => c.Endpoints )
@@ -241,14 +225,8 @@ public class ConfigModuleActions : IConfigModuleActions
     public async Task AddCustomChainAsync( IInteractionContext context)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
-
-        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
-        {
-            await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
-            return;
-        }
+        var dbContext = await InitAction(scope, context);
+        if( dbContext == null ) return;
         
         var mb = new ModalBuilder()
             .WithTitle( "Track a custom chain" )
@@ -266,14 +244,8 @@ public class ConfigModuleActions : IConfigModuleActions
         await context.Interaction.DeferAsync();
         
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-        var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
-
-        if( !await permissionHelper.EnsureUserHasPermission( context, dbContext ) )
-        {
-            await context.Interaction.FollowupAsync( "You do not have permission to use this command", ephemeral: true );
-            return;
-        }
+        var dbContext = await InitAction(scope, context);
+        if( dbContext == null ) return;
         
         var existingChain = await dbContext.Chains.FirstOrDefaultAsync( c => c.Name == chainName &&
                                                                              c.CustomForGuildId == context.Guild.Id );
