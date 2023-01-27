@@ -228,6 +228,126 @@ public class ConfigModuleActionsTest
     }
     
     [Fact]
+    public async Task RevokeRole_NullRole_ShouldThrow()
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        await _configModuleActions.RevokeRoleAsync( _interactionContextMock.Object, default(IRole) );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
+        
+        _dbContextMock.Verify( m => m.Guilds, Times.Once );
+        _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Never );
+        
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+    }
+    
+    [Fact]
+    public async Task RevokeRole_MissingGuild()
+    {
+        _dbContextMock.Setup( m => m.Guilds )
+            .ReturnsDbSet( new List<Guild>() );
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "permission" );
+                text.Should().NotContain( "revoked" );
+                text.Should().Contain( "is not" );
+            } );
+        
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+
+        var role = new Mock<IRole>();
+        role.Setup( m => m.Guild )
+            .Returns( _guildMock.Object );
+        
+        await _configModuleActions.RevokeRoleAsync( _interactionContextMock.Object, role.Object );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
+        
+        _dbContextMock.Verify( m => m.Guilds, Times.Once );
+        _interactionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+
+        _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Never );
+    }
+    
+    [Fact]
+    public async Task RevokeRole_ExistingGuildNewRole()
+    {
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "permission" );
+                text.Should().NotContain( "revoked" );
+                text.Should().Contain( "is not" );
+            } );
+        
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+
+        var role = new Mock<IRole>();
+        role.Setup( m => m.Guild )
+            .Returns( _guildMock.Object );
+        
+        await _configModuleActions.RevokeRoleAsync( _interactionContextMock.Object, role.Object );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
+        
+        _dbContextMock.Verify( m => m.Guilds, Times.Once );
+        _interactionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+
+        _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Never );
+    }
+    
+    [Fact]
+    public async Task RevokeRole_RoleRevoked()
+    {
+        var guilds = new List<Guild>()
+        {
+            new()
+            {
+                GuildId = _guildId,
+                AdminRoles = new()
+                {
+                    new()
+                    {
+                        RoleId = _adminRoleId
+                    }
+                }
+            }
+        };
+        _dbContextMock.Setup( m => m.Guilds )
+            .ReturnsDbSet( guilds );
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "permission" );
+                text.Should().Contain( "revoked" );
+                text.Should().NotContain( "is not" );
+            } );
+        
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+
+        var role = new Mock<IRole>();
+        role.Setup( m => m.Guild )
+            .Returns( _guildMock.Object );
+        role.Setup( m => m.Id )
+            .Returns( _adminRoleId );
+        
+        await _configModuleActions.RevokeRoleAsync( _interactionContextMock.Object, role.Object );
+
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Once );
+        
+        _dbContextMock.Verify( m => m.Guilds, Times.Once );
+        _interactionMock.Verify( m => m.FollowupAsync( It.IsAny<string>(), null, false, true, null, null, null, null ), Times.Once );
+
+        _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Once );
+    }
+    
+    [Fact]
     public async Task ListRoles_PermissionDenied()
     {
         _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
