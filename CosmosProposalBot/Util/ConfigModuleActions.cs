@@ -33,7 +33,7 @@ public class ConfigModuleActions : IConfigModuleActions
         _serviceProvider = serviceProvider;
     }
 
-    private async Task<CopsDbContext?> InitAction( AsyncServiceScope scope, IInteractionContext context )
+    private static async Task<CopsDbContext?> InitAction( AsyncServiceScope scope, IInteractionContext context )
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
         var permissionHelper = scope.ServiceProvider.GetRequiredService<IPermissionHelper>();
