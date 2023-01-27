@@ -77,6 +77,8 @@ public class ConfigModuleActionsTest
             .ReturnsAsync( 0 );
         _dbContextMock.Setup( m => m.Guilds )
             .ReturnsDbSet( guilds );
+        _dbContextMock.Setup( m => m.Endpoints )
+            .ReturnsDbSet( new List<Endpoint>() );
 
         _services = new ServiceCollection();
         _fixture.Inject( _services );
@@ -477,6 +479,19 @@ public class ConfigModuleActionsTest
     }
     
     [Fact]
+    public async Task AddEndpoint_ModalCreated()
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        await _configModuleActions.AddEndpointAsync( _interactionContextMock.Object );
+
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null,null ), Times.Never );
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Never );
+        _interactionMock.Verify( m => m.RespondWithModalAsync( It.IsAny<Modal>(), null ), Times.Once );
+    }
+    
+    [Fact]
     public async Task RemoveEndpoint_PermissionDenied()
     {
         _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
@@ -489,6 +504,114 @@ public class ConfigModuleActionsTest
         _permissionHelperMock.Verify( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object), Times.Once);
         
         _dbContextMock.Verify( m => m.Chains, Times.Never );
+    }
+    
+    [Fact]
+    public async Task RemoveEndpoint_ChainMissing()
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().Contain( "no chain registered" );
+                text.Should().NotContain( "no endpoint registered" );
+                text.Should().NotContain( "Endpoint for provider" );
+            } );
+
+        _dbContextMock.Setup( m => m.Chains )
+            .ReturnsDbSet( new List<Chain>() );
+        
+        await _configModuleActions.RemoveEndpointAsync( _interactionContextMock.Object, It.IsAny<string>(), It.IsAny<string>() );
+
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null,null ), Times.Once );
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Never );
+        
+        _dbContextMock.Verify( m => m.Chains, Times.Once );
+        _dbContextMock.Verify( m => m.Endpoints, Times.Never );
+    }
+    
+    [Theory]
+    [AutoDomainData]
+    public async Task RemoveEndpoint_ExistingChainMissingProvider( string chainName )
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().NotContain( "no chain registered" );
+                text.Should().Contain( "no endpoint registered" );
+                text.Should().NotContain( "Endpoint for provider" );
+            } );
+
+        var chains = new List<Chain>()
+        {
+            new ()
+            {
+                Name = chainName,
+                Endpoints = new List<Endpoint>
+                { }
+            }
+        };
+        _dbContextMock.Setup( m => m.Chains )
+            .ReturnsDbSet( chains );
+        
+        await _configModuleActions.RemoveEndpointAsync( _interactionContextMock.Object, chainName, It.IsAny<string>() );
+
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null,null ), Times.Once );
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Never );
+        
+        _dbContextMock.Verify( m => m.Chains, Times.Once );
+        _dbContextMock.Verify( m => m.Endpoints, Times.Never );
+    }
+    
+    [Theory]
+    [AutoDomainData]
+    public async Task RemoveEndpoint_Success( string chainName, string providerName )
+    {
+        _permissionHelperMock.Setup( m => m.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object ) )
+            .ReturnsAsync( true );
+        
+        _interactionMock.Setup( m => m.FollowupAsync(  It.IsAny<string>(), null, false, true, null, null, null, null ))
+            .Callback( ( string text, Embed[] embeds, bool isTTS, bool ephemeral, AllowedMentions allowedMentions, MessageComponent components, Embed embed, RequestOptions options ) =>
+            {
+                text.Should().NotContain( "not have permission" );
+                text.Should().NotContain( "no chain registered" );
+                text.Should().NotContain( "no endpoint registered" );
+                text.Should().Contain( "Endpoint for provider" );
+            } );
+
+        var chains = new List<Chain>()
+        {
+            new ()
+            {
+                Name = chainName,
+                Endpoints = new List<Endpoint>
+                {
+                    new()
+                    {
+                        Provider = providerName
+                    }
+                }
+            }
+        };
+
+        _dbContextMock.Setup( m => m.Chains )
+            .ReturnsDbSet( chains );
+        
+        await _configModuleActions.RemoveEndpointAsync( _interactionContextMock.Object, chainName, providerName );
+
+        _interactionMock.Verify( m => m.RespondAsync( It.IsAny<string>(), null, false, true, null, null, null,null ), Times.Once );
+        _interactionMock.Verify( m => m.DeferAsync( true, null ), Times.Never );
+        
+        _dbContextMock.Verify( m => m.Chains, Times.Once );
+        _dbContextMock.Verify( m => m.Endpoints, Times.Once );
+        _dbContextMock.Verify( m => m.SaveChangesAsync( default ), Times.Once );
     }
     
     [Fact]
