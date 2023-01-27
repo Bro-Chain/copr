@@ -14,13 +14,10 @@ namespace CosmosProposalBot.Modules;
 [Discord.Interactions.Group("config","Configure the bot")]
 public class ConfigModule : InteractionModuleBase
 {
-    private readonly ILogger<ConfigModule> _logger;
     private readonly IServiceProvider _serviceProvider;
 
-    public ConfigModule( ILogger<ConfigModule> logger,
-        IServiceProvider serviceProvider)
+    public ConfigModule( IServiceProvider serviceProvider)
     {
-        _logger = logger;
         _serviceProvider = serviceProvider;
     }
 
