@@ -25,6 +25,7 @@ public class PermissionHelperTest
     
     private readonly ulong _adminRoleId = 10203L;
     private readonly ulong _adminUserId = 20304L;
+    private readonly ulong _nonAdminUserId = 30405L;
     private readonly ulong _guildWithUserAndRole = 40506L;
     private readonly ulong _guildWithoutUserOrRole = 50607L;
 
@@ -91,6 +92,8 @@ public class PermissionHelperTest
     {
         _guildUserMock.Setup( m=> m.RoleIds)
             .Returns( () => new List<ulong>() {  } );
+        _guildUserMock.Setup( m=> m.Id )
+            .Returns( () => _adminUserId );
         _guildMock.Setup( m => m.Id )
             .Returns( _guildWithUserAndRole );
 
@@ -103,6 +106,8 @@ public class PermissionHelperTest
     {
         _guildUserMock.Setup( m=> m.RoleIds)
             .Returns( () => new List<ulong>() { _adminRoleId } );
+        _guildUserMock.Setup( m=> m.Id )
+            .Returns( () => _nonAdminUserId );
         _guildMock.Setup( m => m.Id )
             .Returns( _guildWithUserAndRole );
 
@@ -132,5 +137,19 @@ public class PermissionHelperTest
 
         var result = await _permissionHelper.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object );
         result.Should().BeTrue();
+    }
+    
+    [Fact]
+    public async Task EnsureUserHasPermission_NoRoleIdMatch()
+    {
+        _guildUserMock.Setup( m=> m.RoleIds)
+            .Returns( () => new List<ulong>() {  } );
+        _guildUserMock.Setup( m=> m.Id )
+            .Returns( () => _nonAdminUserId );
+        _guildMock.Setup( m => m.Id )
+            .Returns( _guildWithUserAndRole );
+    
+        var result = await _permissionHelper.EnsureUserHasPermission( _interactionContextMock.Object, _dbContextMock.Object );
+        result.Should().BeFalse();
     }
 }

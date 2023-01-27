@@ -42,5 +42,5 @@ public class PermissionHelper : IPermissionHelper
         => guild.AdminRoles.Any( r => userRoleIds.Contains( r.RoleId ) );
 
     private bool UserIsAssignedAdmin( Guild guild, ulong userId )
-        => guild.AdminUsers.Any( u => u.UserId != userId );
+        => guild.AdminUsers.Any( u => u.UserId == userId );
 }
