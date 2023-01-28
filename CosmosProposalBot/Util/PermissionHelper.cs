@@ -1,4 +1,5 @@
 using CosmosProposalBot.Data;
+using CosmosProposalBot.Data.Model;
 using Discord;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,24 +22,25 @@ public class PermissionHelper : IPermissionHelper
             .SingleOrDefaultAsync( g => g.GuildId == context.Guild.Id );
         if( guild == default )
         {
-            return false;
+            // There is no record of this guild in the database, so any user can configure the bot
+            return true;
         }
 
-        if( !guild.AdminRoles.Any() || 
-            guild.AdminRoles.Any( r => userRoles.Contains( r.RoleId ) ) )
+        if( !AnyAdminRolesOrUsersDefined( guild ) || 
+            UserHasAdminRole( guild, userRoles ) || 
+            UserIsAssignedAdmin( guild, context.User.Id ) )
         {
-            // We good
+            return true;
         }
-        else if( !guild.AdminUsers.Any() || 
-                 guild.AdminUsers.Any( u => u.UserId != context.User.Id ) )
-        {
-            // We good
-        }
-        else
-        {
-            return false;
-        }
-
-        return true;
+        return false;
     }
+
+    private static bool AnyAdminRolesOrUsersDefined( Guild guild ) 
+        => guild.AdminRoles.Any() || guild.AdminUsers.Any();
+
+    private static bool UserHasAdminRole( Guild guild, IReadOnlyCollection<ulong> userRoleIds )
+        => guild.AdminRoles.Any( r => userRoleIds.Contains( r.RoleId ) );
+
+    private static bool UserIsAssignedAdmin( Guild guild, ulong userId )
+        => guild.AdminUsers.Any( u => u.UserId == userId );
 }
