@@ -30,75 +30,19 @@ public class SubscribeModule : InteractionModuleBase
 
     [SlashCommand("supported-chains", "Lists all chains that the bot currently supports")]
     public async Task SupportedChains()
-    {
-        try
-        {
-            await DeferAsync();
-            
-            await using var scope = _serviceProvider.CreateAsyncScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<CopsDbContext>();
-            var guildSpecificChains = dbContext.Chains
-                .Where( c => c.CustomForGuildId == Context.Guild.Id )
-                .Select( c => $"`{c.Name}`" )
-                .ToList();
-
-            var standardChains = _options.Value.SupportedChains
-                .Select( c => $"`{c}`" );
-
-            var eb = new EmbedBuilder()
-                .WithTitle( "Supported Chains" )
-                .WithFields(
-                    new EmbedFieldBuilder()
-                        .WithName("Standard")
-                        .WithValue(string.Join(", ", standardChains)),
-                    new EmbedFieldBuilder()
-                        .WithName("Custom")
-                        .WithValue(string.Join(", ", guildSpecificChains)));
-
-            await FollowupAsync($"", embed: eb.Build());
-        }
-        catch( Exception e )
-        {
-            Console.WriteLine( e );
-            throw;
-        }
-    }
+        => await _serviceProvider.CreateScope().ServiceProvider
+            .GetRequiredService<ISubscribeModuleActions>()
+            .SupportedChains( Context );
 
     [SlashCommand( "private", "Subscribes to DMs about proposals for a given chain" )]
     public async Task SubscribePrivate( string chainName )
-    {
-        try
-        {
-            await DeferAsync( ephemeral: true );
-
-            await using var scope = _serviceProvider.CreateAsyncScope();
-            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
-            
-            await subscriptionHelper.SubscribeDm( Context, chainName );
-        }
-        catch( Exception e )
-        {
-            Console.WriteLine( e );
-            throw;
-        }
-    }
+        => await _serviceProvider.CreateScope().ServiceProvider
+            .GetRequiredService<ISubscribeModuleActions>()
+            .SubscribePrivate( Context, chainName );
 
     [SlashCommand( "channel", "Subscribes to channel notifications about proposals for a given chain" )]
     public async Task SubscribeChannel( string chainName )
-    {
-        try
-        {
-            await DeferAsync();
-
-            await using var scope = _serviceProvider.CreateAsyncScope();
-            var subscriptionHelper = scope.ServiceProvider.GetRequiredService<ISubscriptionHelper>();
-            
-            await subscriptionHelper.SubscribeChannel( Context, chainName );
-        }
-        catch( Exception e )
-        {
-            Console.WriteLine( e );
-            throw;
-        }
-    }
+        => await _serviceProvider.CreateScope().ServiceProvider
+            .GetRequiredService<ISubscribeModuleActions>()
+            .SubscribeChannel( Context, chainName );
 }
