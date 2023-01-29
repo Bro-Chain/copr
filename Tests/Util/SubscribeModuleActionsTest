@@ -1,0 +1,32 @@
+using System.Threading.Tasks;
+using AutoFixture;
+using CosmosProposalBot.Modules;
+using Discord;
+using Moq;
+using Xunit;
+
+namespace Tests.Util;
+
+public class SubscribeModuleActionsTest
+{
+    private readonly IFixture _fixture = FixtureFactory.CreateFixture();
+    private SubscribeModuleActions _configModuleActions;
+    private Mock<IDiscordInteraction> _interactionMock;
+    private Mock<IInteractionContext> _interactionContextMock;
+
+    public SubscribeModuleActionsTest()
+    {
+        _interactionMock = _fixture.Freeze<Mock<IDiscordInteraction>>();
+        _interactionContextMock = _fixture.Freeze<Mock<IInteractionContext>>();
+        _interactionContextMock.Setup( m => m.Interaction )
+            .Returns( _interactionMock.Object );
+
+        _configModuleActions = _fixture.Create<SubscribeModuleActions>();
+    }
+
+    [Fact]
+    public async Task SupportedChains_Something()
+    {
+     System.Console.WriteLine("Hello World");   
+    }
+}
